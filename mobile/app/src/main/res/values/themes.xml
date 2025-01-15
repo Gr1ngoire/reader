@@ -1,0 +1,13 @@
+<resources xmlns:tools="http://schemas.android.com/tools">
+    <!-- Base application theme. -->
+    <style name="Base.Theme.Reader" parent="Theme.Material3.DayNight.NoActionBar">
+        <!-- Customize your light theme here. -->
+        <!-- <item name="colorPrimary">@color/my_light_primary</item> -->
+        <item name="android:background">#D99F6C</item>
+        <item name="android:statusBarColor">#59341E</item>
+        <item name="android:navigationBarColor">#59341E</item>
+<!-- theme                  #A8B5BF #BF6D24 #D99F6C #8C4B26 #59341E-->
+    </style>
+
+    <style name="Theme.Reader" parent="Base.Theme.Reader" />
+</resources>
