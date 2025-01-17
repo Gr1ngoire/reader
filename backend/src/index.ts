@@ -1,62 +1,38 @@
-import "@aws-sdk/crc64-nvme-crt";
-
 import { join, resolve } from "path";
-import { createWriteStream, existsSync, mkdirSync } from "fs";
-
 import Koa from "koa";
-import { S3Client, GetObjectCommand } from "@aws-sdk/client-s3";
+import Router from "koa-router";
+import { BooksService } from "./services/books.service.ts";
 
-import { ENV } from "./env.config.ts";
-
+const router = new Router();
 const server = new Koa();
+
+router.get("/get-book-content", async (ctx, next) => {
+  try {
+    const fileName = ctx.request.query.fileName as string;
+    if (!fileName) {
+      ctx.status = 400;
+      ctx.body = new Error("File name is required.");
+      return;
+    }
+
+    const booksService = new BooksService();
+    const fileStream = await booksService.getBookFileStream(fileName);
+
+    // Set response headers for a PDF
+    ctx.set("Content-Type", "application/pdf");
+    ctx.set("Content-Disposition", `attachment; filename=${fileName}`);
+
+    // Pipe the file stream directly to the client
+    ctx.body = fileStream;
+  } catch (error) {
+    console.error("Error fetching file:", error);
+    ctx.status = 500;
+    ctx.body = "Error fetching file.";
+  }
+});
+
+server.use(router.routes());
 
 server.listen(3000, async () => {
   console.log("Server started on port 3000");
-
-  const client = new S3Client({
-    region: ENV.AWS.REGION,
-    credentials: {
-      accessKeyId: ENV.AWS.ACCESS_KEY_ID,
-      secretAccessKey: ENV.AWS.SECRET_ACCESS_KEY,
-    },
-    runtime: "node",
-  });
-
-  const bookFileName = "meditations.pdf";
-  const downloadPath = resolve(import.meta.dirname, "downloads");
-  if (!existsSync(downloadPath)) {
-    mkdirSync(downloadPath);
-  }
-
-  try {
-    // Create the GetObjectCommand
-    const command = new GetObjectCommand({
-      Bucket: ENV.AWS.BUCKET_NAME,
-      Key: bookFileName,
-    });
-
-    // Send the command
-    const response = await client.send(command);
-
-    if (!response.Body) {
-      throw new Error("No file body found in the S3 response.");
-    }
-
-    // Create a write stream to save the file locally
-    const filePath = join(downloadPath, bookFileName);
-    const writeStream = createWriteStream(filePath);
-
-    // Pipe the response body to the file
-    (response.Body as NodeJS.ReadableStream).pipe(writeStream);
-
-    writeStream.on("finish", () => {
-      console.log(`File downloaded successfully to ${filePath}`);
-    });
-
-    writeStream.on("error", (err) => {
-      console.error("Error writing the file:", err);
-    });
-  } catch (error) {
-    console.error("Error downloading the file:", error);
-  }
 });
