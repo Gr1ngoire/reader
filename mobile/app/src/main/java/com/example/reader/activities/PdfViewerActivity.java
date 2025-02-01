@@ -1,11 +1,14 @@
-package com.example.reader;
+package com.example.reader.activities;
 
 import android.content.Intent;
 import android.os.Bundle;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+
+import com.example.reader.R;
 import com.github.barteksc.pdfviewer.PDFView;
+
 import java.io.File;
 
 public class PdfViewerActivity extends AppCompatActivity {

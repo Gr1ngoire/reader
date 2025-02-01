@@ -43,6 +43,7 @@ dependencies {
     implementation(libs.material.v190)
     implementation(libs.mhiew.android.pdf.viewer)
     implementation(libs.okhttp)
+    implementation(project(":opencv"))
     testImplementation(libs.junit)
     androidTestImplementation(libs.ext.junit)
     androidTestImplementation(libs.espresso.core)
