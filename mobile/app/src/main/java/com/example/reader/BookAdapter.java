@@ -13,6 +13,7 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.reader.activities.PdfViewerActivity;
 import com.example.reader.entities.Book;
 import com.example.reader.services.BooksService;
 

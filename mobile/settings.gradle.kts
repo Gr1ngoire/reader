@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Reader"
 include(":app")
+include(":opencv")
+project(":opencv").projectDir = File(rootDir.parent, "../modules/opencv")

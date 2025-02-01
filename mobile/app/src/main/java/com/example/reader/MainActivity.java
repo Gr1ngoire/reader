@@ -1,16 +1,19 @@
 package com.example.reader;
 
+import android.content.Intent;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.view.View;
+import android.widget.Button;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.reader.activities.CameraActivity;
 import com.example.reader.entities.Book;
 import com.google.android.material.button.MaterialButton;
 
@@ -32,8 +35,13 @@ public class MainActivity extends AppCompatActivity {
         mockedBooks.add(new Book("The call of Cthulhu", "Howard Lovecraft", "the_call_of_cthulhu.pdf"));
         mockedBooks.add(new Book("Meditations", "Marcus Aurelius", "meditations.pdf"));
         mockedBooks.add(new Book("Harry Potter and the Philosopher's Stone", "J.K. Rowling", "harry_potter_and_the_philosophers_stone.pdf"));
-
         this.initAllBooksLayout(mockedBooks);
+
+        Button btnOpenCamera = findViewById(R.id.btnOpenCamera);
+        btnOpenCamera.setOnClickListener(view -> {
+            Intent intent = new Intent(MainActivity.this, CameraActivity.class);
+            startActivity(intent);
+        });
     }
 
     private void initAllBooksLayout(List<Book> books) {
