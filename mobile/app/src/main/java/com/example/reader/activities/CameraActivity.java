@@ -1,12 +1,23 @@
 package com.example.reader.activities;
 
+import static android.graphics.ImageFormat.YUV_420_888;
 import static org.opencv.videoio.Videoio.CAP_ANDROID;
 
 import android.Manifest;
+import android.content.Context;
 import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
+import android.media.Image;
+import android.media.ImageReader;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.Looper;
 import android.util.Log;
 import android.widget.ImageView;
@@ -23,6 +34,7 @@ import com.example.reader.services.EyesTrackingService;
 import org.opencv.android.CameraBridgeViewBase;
 import org.opencv.android.OpenCVLoader;
 import org.opencv.android.Utils;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
@@ -32,6 +44,9 @@ import org.opencv.core.Rect;
 import org.opencv.core.Scalar;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
+
+import java.nio.ByteBuffer;
+import java.util.Collections;
 
 public class CameraActivity extends AppCompatActivity implements CameraBridgeViewBase.CvCameraViewListener2 {
     private EyesTrackingService eyesTrackingService;
@@ -43,6 +58,11 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
     private boolean isCameraRunning = false;
     private static final int CAMERA_PERMISSION_CODE = 100;
     private final int CAMERA_INDEX = 1;
+    private CameraManager cameraManager;
+    private ImageReader imageReader;
+    private CameraDevice cameraDevice;
+    private Handler backgroundHandler;
+    private HandlerThread backgroundThread;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -77,6 +97,8 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
         openCvCameraView.setCameraPermissionGranted();
         openCvCameraView.enableView();
 
+        startBackgroundThread();
+        startCamera();
 
     }
 
@@ -94,16 +116,146 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
         }
     }
 
+    private void startBackgroundThread() {
+        backgroundThread = new HandlerThread("CameraBackground");
+        backgroundThread.start();
+        backgroundHandler = new Handler(backgroundThread.getLooper());
+    }
+
     private void startCamera() {
         Log.d("CameraActivity", "Attempting to open camera...");
 
-        videoCapture = new VideoCapture(CAMERA_INDEX, CAP_ANDROID);
+        cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                Log.e("CAMERA PERMISSION", "NOT GRANTED BIIIIIIITCH");
+                return; // Don't proceed if permission isn't granted
+            }
+            String frontCameraId = getFrontCameraId();
+            imageReader = ImageReader.newInstance(640, 480, YUV_420_888, 2);
+            imageReader.setOnImageAvailableListener(image -> processFrame(image), backgroundHandler);
 
-        if (videoCapture.isOpened()) {
-            Log.d("CameraActivity", "Camera opened successfully");
-        } else {
-            Log.e("CameraActivity", "Failed to open camera");
+            cameraManager.openCamera(frontCameraId, new CameraDevice.StateCallback() {
+                @Override
+                public void onOpened(@NonNull CameraDevice camera) {
+                    cameraDevice = camera;
+                    startCameraPreview();
+                }
+
+                @Override
+                public void onDisconnected(@NonNull CameraDevice camera) {
+                    camera.close();
+                }
+
+                @Override
+                public void onError(@NonNull CameraDevice camera, int error) {
+                    camera.close();
+                }
+            }, backgroundHandler);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
+    }
+
+    private String getFrontCameraId() throws CameraAccessException {
+        for (String cameraId : cameraManager.getCameraIdList()) {
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            Integer lensFacing = characteristics.get(CameraCharacteristics.LENS_FACING);
+            if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+                return cameraId;
+            }
+        }
+        return null;
+    }
+
+    private void startCameraPreview() {
+        try {
+            CaptureRequest.Builder previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewRequestBuilder.addTarget(imageReader.getSurface());
+
+            cameraDevice.createCaptureSession(Collections.singletonList(imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    try {
+                        session.setRepeatingRequest(previewRequestBuilder.build(), null, backgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {}
+            }, backgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void processFrame(ImageReader reader) {
+        Image image = reader.acquireLatestImage();
+        if (image == null) return;
+
+        Mat mat = convertYUVtoMat(image);
+        image.close();
+
+        CvCameraFrameWrapper frameWrapper = new CvCameraFrameWrapper(mat);
+
+        onCameraFrame(frameWrapper);
+        image.close();
+    }
+
+    private Mat convertYUVtoMat(Image image) {
+        int width = image.getWidth();
+        int height = image.getHeight();
+
+        Image.Plane yPlane = image.getPlanes()[0];
+        Image.Plane uPlane = image.getPlanes()[1];
+        Image.Plane vPlane = image.getPlanes()[2];
+
+        ByteBuffer yBuffer = yPlane.getBuffer();
+        ByteBuffer uBuffer = uPlane.getBuffer();
+        ByteBuffer vBuffer = vPlane.getBuffer();
+
+        // Get row strides and pixel strides
+        int yRowStride = yPlane.getRowStride();
+        int uvRowStride = uPlane.getRowStride(); // U and V have same stride
+        int uvPixelStride = uPlane.getPixelStride();
+
+        // Create a Mat for YUV
+        Mat yuvMat = new Mat(height + height / 2, width, CvType.CV_8UC1);
+        byte[] yuvData = new byte[yuvMat.rows() * yuvMat.cols()];
+        int pos = 0;
+
+        // Copy Y plane
+        for (int row = 0; row < height; row++) {
+            yBuffer.position(row * yRowStride);
+            yBuffer.get(yuvData, pos, width);
+            pos += width;
+        }
+
+        // Copy UV planes with proper handling of pixel stride
+        for (int row = 0; row < height / 2; row++) {
+            uBuffer.position(row * uvRowStride);
+            vBuffer.position(row * uvRowStride);
+
+            for (int col = 0; col < width / 2; col++) {
+                yuvData[pos++] = vBuffer.get(); // V
+                yuvData[pos++] = uBuffer.get(); // U
+            }
+        }
+
+        // Put into Mat
+        yuvMat.put(0, 0, yuvData);
+
+        // Convert to RGBA
+        Mat rgbMat = new Mat();
+        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGBA_NV21);
+
+        // Rotate to correct orientation
+        Mat rotatedMat = new Mat();
+        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_CLOCKWISE);
+
+        return rotatedMat;
     }
 
     @Override
@@ -193,5 +345,32 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
     @Override
     public void onCameraViewStopped() {
         frame.release();
+    }
+}
+
+class CvCameraFrameWrapper implements CameraBridgeViewBase.CvCameraViewFrame {
+    private final Mat rgbaMat;
+
+    public CvCameraFrameWrapper(Mat mat) {
+        this.rgbaMat = mat;
+    }
+
+    @Override
+    public Mat rgba() {
+        return rgbaMat;
+    }
+
+    @Override
+    public Mat gray() {
+        Mat grayMat = new Mat();
+        Imgproc.cvtColor(rgbaMat, grayMat, Imgproc.COLOR_RGBA2GRAY);
+        return grayMat;
+    }
+
+    @Override
+    public void release() {
+        if (rgbaMat != null) {
+            rgbaMat.release();
+        }
     }
 }
