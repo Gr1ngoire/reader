@@ -1,24 +1,18 @@
 package com.example.reader.activities;
 
-import android.Manifest;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-import androidx.core.content.ContextCompat;
 
 import com.example.reader.R;
 import com.example.reader.services.EyesTrackingService;
 import com.github.barteksc.pdfviewer.PDFView;
-
-import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
 
@@ -30,7 +24,7 @@ public class PdfViewerActivity extends AppCompatActivity {
         public void onReceive(Context context, Intent intent) {
             float offsetX = intent.getFloatExtra("offsetX", 0);
             float offsetY = intent.getFloatExtra("offsetY", 0);
-            Log.i("COOORIDNATEEEEEEEEES", String.format(String.valueOf(offsetY), offsetX));
+            Log.d("COORDINATES", String.format(String.valueOf(offsetX), offsetY));
 
             // Scroll the PDF based on detected pupil movement
             scrollPdf(offsetY);
@@ -38,10 +32,9 @@ public class PdfViewerActivity extends AppCompatActivity {
     };
     @Override
     protected void onCreate(Bundle savedInstanceState) {
-        System.out.println();
         super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_pdf_viewer);
         registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"), Context.RECEIVER_NOT_EXPORTED);
+        setContentView(R.layout.activity_pdf_viewer);
 
         PDFView pdfView = findViewById(R.id.pdfView);
         Intent intent = getIntent();

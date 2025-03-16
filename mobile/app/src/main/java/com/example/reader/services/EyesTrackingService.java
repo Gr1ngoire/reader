@@ -1,8 +1,6 @@
 package com.example.reader.services;
 
 import static android.graphics.ImageFormat.YUV_420_888;
-import static org.opencv.videoio.Videoio.CAP_ANDROID;
-import static org.opencv.videoio.Videoio.CAP_ANY;
 
 import android.Manifest;
 import android.app.Notification;
@@ -20,23 +18,17 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CaptureRequest;
 import android.media.Image;
 import android.media.ImageReader;
-import android.os.Bundle;
 import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
-import android.os.Looper;
 import android.util.Log;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
-import androidx.core.app.ActivityCompat;
-import androidx.core.app.NotificationCompat;
-import androidx.core.content.ContextCompat;
 
 import com.example.reader.R;
 
 import org.opencv.android.CameraBridgeViewBase;
-import org.opencv.android.OpenCVLoader;
+import org.opencv.core.Core;
 import org.opencv.core.CvType;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
@@ -44,6 +36,7 @@ import org.opencv.core.MatOfKeyPoint;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
+import org.opencv.core.Scalar;
 import org.opencv.core.Size;
 import org.opencv.features2d.SimpleBlobDetector;
 import org.opencv.features2d.SimpleBlobDetector_Params;
@@ -188,44 +181,106 @@ public class EyesTrackingService extends Service {
 
     private void processFrame(ImageReader reader) {
         Image image = reader.acquireLatestImage();
-        if (image != null) {
-            Mat frame = convertYUVtoMat(image);
-            processOpenCVFrame(frame);
-            image.close();
-        }
+        if (image == null) return;
+
+        Mat mat = convertYUVtoMat(image);
+        image.close();
+
+        // Wrap it into a CvCameraViewFrame
+        CvCameraFrameWrapper frameWrapper = new CvCameraFrameWrapper(mat);
+
+        processOpenCVFrame(frameWrapper);
+        image.close();
     }
 
     private Mat convertYUVtoMat(Image image) {
-        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
-        byte[] bytes = new byte[buffer.remaining()];
-        buffer.get(bytes);
-        Mat yuv = new Mat(image.getHeight() + image.getHeight() / 2, image.getWidth(), CvType.CV_8UC1);
-        yuv.put(0, 0, bytes);
-        Mat rgb = new Mat();
-        Imgproc.cvtColor(yuv, rgb, Imgproc.COLOR_YUV2RGB_NV21);
-        return rgb;
-    }
+        int width = image.getWidth();
+        int height = image.getHeight();
 
-    private void processOpenCVFrame(Mat frame) {
-        Rect[] faces = this.detectFaces(frame);
-        if (faces.length > 0) {
-            Log.i("FACES", Arrays.toString(faces));
+        Image.Plane yPlane = image.getPlanes()[0];
+        Image.Plane uPlane = image.getPlanes()[1];
+        Image.Plane vPlane = image.getPlanes()[2];
+
+        ByteBuffer yBuffer = yPlane.getBuffer();
+        ByteBuffer uBuffer = uPlane.getBuffer();
+        ByteBuffer vBuffer = vPlane.getBuffer();
+
+        // Get row strides and pixel strides
+        int yRowStride = yPlane.getRowStride();
+        int uvRowStride = uPlane.getRowStride(); // U and V have same stride
+        int uvPixelStride = uPlane.getPixelStride();
+
+        // Create a Mat for YUV
+        Mat yuvMat = new Mat(height + height / 2, width, CvType.CV_8UC1);
+        byte[] yuvData = new byte[yuvMat.rows() * yuvMat.cols()];
+        int pos = 0;
+
+        // Copy Y plane
+        for (int row = 0; row < height; row++) {
+            yBuffer.position(row * yRowStride);
+            yBuffer.get(yuvData, pos, width);
+            pos += width;
         }
-        for (Rect face : faces) {
-            Mat faceFrame = frame.submat(face);
-            Rect[] eyes = this.detectEyes(faceFrame);
 
-            Log.i("EYES", Arrays.toString(eyes));
-            for (Rect eye : eyes) {
-                Mat eyeFrame = faceFrame.submat(eye);
-                MatOfKeyPoint pupils = this.detectPupils(eyeFrame, eye);
+        // Copy UV planes with proper handling of pixel stride
+        for (int row = 0; row < height / 2; row++) {
+            uBuffer.position(row * uvRowStride);
+            vBuffer.position(row * uvRowStride);
 
-                Log.i("PUPILS", pupils.toString());
-
-                // Send pupil data to PdfViewerActivity
-                sendPupilData(pupils, eye);
+            for (int col = 0; col < width / 2; col++) {
+                yuvData[pos++] = vBuffer.get(); // V
+                yuvData[pos++] = uBuffer.get(); // U
             }
         }
+
+        // Put into Mat
+        yuvMat.put(0, 0, yuvData);
+
+        // Convert to RGBA
+        Mat rgbMat = new Mat();
+        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGBA_NV21);
+
+        // Rotate to correct orientation
+        Mat rotatedMat = new Mat();
+        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_CLOCKWISE);
+
+        return rotatedMat;
+    }
+
+    private void processOpenCVFrame(CameraBridgeViewBase.CvCameraViewFrame inputFrame) {
+        Mat frame = new Mat();
+        inputFrame.rgba().copyTo(frame);
+
+        Rect[] faces = this.detectFaces(frame);
+        for (Rect face : faces) {
+            Imgproc.rectangle(frame, face.tl(), face.br(), new Scalar(255, 0, 0), 2);
+
+            Mat faceFrame = frame.submat(face);
+
+            // Detect eyes within the face
+            Rect[] eyes = this.detectEyes(faceFrame);
+            for (Rect eye : eyes) {
+                Imgproc.rectangle(faceFrame, eye.tl(), eye.br(), new Scalar(0, 255, 0), 2);
+
+                Mat eyeFrame = faceFrame.submat(eye);
+                Log.d("CameraActivity", "Detected eyes: " + eyes.length);
+
+                // Cut eyebrows and process pupils
+                Mat eyeWithoutBrows = this.cutEyebrows(eyeFrame);
+                MatOfKeyPoint pupils = this.detectPupils(eyeWithoutBrows, eye);
+
+                Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
+
+                sendPupilData(pupils, eye);
+
+                for (KeyPoint pupil : pupils.toArray()) {
+                    Point pupilCenter = new Point(pupil.pt.x, pupil.pt.y);
+                    Imgproc.circle(eyeWithoutBrows, pupilCenter, 10, new Scalar(0, 255, 0), 2);
+                }
+            }
+        }
+
+
     }
 
     private void sendPupilData(MatOfKeyPoint pupils, Rect eye) {
@@ -413,5 +468,32 @@ public class EyesTrackingService extends Service {
         params.set_maxArea(1500);
 
         return SimpleBlobDetector.create(params);
+    }
+}
+
+class CvCameraFrameWrapper implements CameraBridgeViewBase.CvCameraViewFrame {
+    private final Mat rgbaMat;
+
+    public CvCameraFrameWrapper(Mat mat) {
+        this.rgbaMat = mat;
+    }
+
+    @Override
+    public Mat rgba() {
+        return rgbaMat;
+    }
+
+    @Override
+    public Mat gray() {
+        Mat grayMat = new Mat();
+        Imgproc.cvtColor(rgbaMat, grayMat, Imgproc.COLOR_RGBA2GRAY);
+        return grayMat;
+    }
+
+    @Override
+    public void release() {
+        if (rgbaMat != null) {
+            rgbaMat.release();
+        }
     }
 }
