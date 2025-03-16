@@ -24,6 +24,7 @@ import android.os.IBinder;
 import android.util.Log;
 
 import androidx.annotation.NonNull;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.reader.R;
 
@@ -263,15 +264,16 @@ public class EyesTrackingService extends Service {
                 Imgproc.rectangle(faceFrame, eye.tl(), eye.br(), new Scalar(0, 255, 0), 2);
 
                 Mat eyeFrame = faceFrame.submat(eye);
-                Log.d("CameraActivity", "Detected eyes: " + eyes.length);
+//                Log.d("CameraActivity", "Detected eyes: " + eyes.length);
 
                 // Cut eyebrows and process pupils
                 Mat eyeWithoutBrows = this.cutEyebrows(eyeFrame);
                 MatOfKeyPoint pupils = this.detectPupils(eyeWithoutBrows, eye);
 
-                Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
-
-                sendPupilData(pupils, eye);
+                if (pupils.toArray().length > 0) {
+//                    Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
+                    sendPupilData(pupils, eye);
+                }
 
                 for (KeyPoint pupil : pupils.toArray()) {
                     Point pupilCenter = new Point(pupil.pt.x, pupil.pt.y);
@@ -284,22 +286,20 @@ public class EyesTrackingService extends Service {
     }
 
     private void sendPupilData(MatOfKeyPoint pupils, Rect eye) {
-        if (!pupils.empty()) {
-            for (KeyPoint keyPoint : pupils.toList()) {
-                float pupilX = (float) keyPoint.pt.x;
-                float pupilY = (float) keyPoint.pt.y;
-                float eyeCenterX = eye.x + eye.width / 2.0f;
-                float eyeCenterY = eye.y + eye.height / 2.0f;
+        for (KeyPoint keyPoint : pupils.toList()) {
+            float pupilX = (float) keyPoint.pt.x;
+            float pupilY = (float) keyPoint.pt.y;
+            float eyeCenterX = eye.x + eye.width / 2.0f;
+            float eyeCenterY = eye.y + eye.height / 2.0f;
 
-                float offsetX = pupilX - eyeCenterX;
-                float offsetY = pupilY - eyeCenterY;
+            float offsetX = pupilX - eyeCenterX;
+            float offsetY = pupilY - eyeCenterY;
 
-                // Send the offset values using Broadcast
-                Intent intent = new Intent("PUPIL_MOVEMENT");
-                intent.putExtra("offsetX", offsetX);
-                intent.putExtra("offsetY", offsetY);
-                sendBroadcast(intent);
-            }
+            // Send the offset values using Broadcast
+            Intent intent = new Intent("PUPIL_MOVEMENT");
+//            intent.putExtra("offsetX", offsetX);
+            intent.putExtra("offsetY", offsetY);
+            LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         }
     }
 

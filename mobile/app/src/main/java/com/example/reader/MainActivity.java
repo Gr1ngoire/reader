@@ -1,7 +1,6 @@
 package com.example.reader;
 
 import android.Manifest;
-import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
@@ -9,7 +8,6 @@ import android.os.Bundle;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
-import android.widget.Button;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -19,9 +17,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.reader.activities.CameraActivity;
 import com.example.reader.entities.Book;
-import com.example.reader.services.EyesTrackingService;
 import com.google.android.material.button.MaterialButton;
 
 import org.opencv.android.OpenCVLoader;

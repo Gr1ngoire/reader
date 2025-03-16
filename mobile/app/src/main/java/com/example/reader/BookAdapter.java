@@ -13,14 +13,12 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.reader.activities.CameraActivity;
 import com.example.reader.activities.PdfViewerActivity;
 import com.example.reader.entities.Book;
 import com.example.reader.services.BooksService;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 
 public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder> {
     private final List<Book> books;

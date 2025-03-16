@@ -9,6 +9,7 @@ import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.reader.R;
 import com.example.reader.services.EyesTrackingService;
@@ -22,9 +23,8 @@ public class PdfViewerActivity extends AppCompatActivity {
     private final BroadcastReceiver pupilMovementReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            float offsetX = intent.getFloatExtra("offsetX", 0);
             float offsetY = intent.getFloatExtra("offsetY", 0);
-            Log.d("COORDINATES", String.format(String.valueOf(offsetX), offsetY));
+            Log.d("DELTA", String.format(String.valueOf(offsetY)));
 
             // Scroll the PDF based on detected pupil movement
             scrollPdf(offsetY);
@@ -33,10 +33,9 @@ public class PdfViewerActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"), Context.RECEIVER_NOT_EXPORTED);
         setContentView(R.layout.activity_pdf_viewer);
 
-        PDFView pdfView = findViewById(R.id.pdfView);
+        pdfView = findViewById(R.id.pdfView);
         Intent intent = getIntent();
         String filePath = intent.getStringExtra("filePath");
         File file = new File(filePath);
@@ -47,6 +46,7 @@ public class PdfViewerActivity extends AppCompatActivity {
             Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
         }
 
+        LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"));
         Intent serviceIntent = new Intent(this, EyesTrackingService.class);
         startForegroundService(serviceIntent);
     }
@@ -54,7 +54,7 @@ public class PdfViewerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"), Context.RECEIVER_NOT_EXPORTED);
+        LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"));
     }
 
     @Override
@@ -64,6 +64,19 @@ public class PdfViewerActivity extends AppCompatActivity {
     }
 
     private void scrollPdf(float deltaY) {
-        pdfView.moveRelativeTo(0, -deltaY * 100); // Adjust sensitivity factor
+        float cellarSensitivity = 100;
+        float cellarSensitivityNormalizer = cellarSensitivity;
+        float bottomSensitivity = -cellarSensitivity;
+        float bottomSensitivityNormalizer = 105;
+        float moveDelta = 0;
+        if (deltaY <= -bottomSensitivityNormalizer) {
+            moveDelta = (deltaY + bottomSensitivityNormalizer) + bottomSensitivity;
+        } else if (deltaY >= -cellarSensitivityNormalizer) {
+            moveDelta = (deltaY + cellarSensitivityNormalizer) + cellarSensitivity;
+        } else {
+            moveDelta = 0;
+        }
+
+        pdfView.moveRelativeTo(0, moveDelta); // Adjust sensitivity factor
     }
 }
