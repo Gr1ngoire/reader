@@ -1,31 +1,59 @@
 package com.example.reader;
 
+import android.Manifest;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
 import android.os.Bundle;
 import android.util.DisplayMetrics;
+import android.util.Log;
 import android.view.View;
 import android.widget.Button;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.app.ActivityCompat;
+import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.reader.activities.CameraActivity;
 import com.example.reader.entities.Book;
+import com.example.reader.services.EyesTrackingService;
 import com.google.android.material.button.MaterialButton;
+
+import org.opencv.android.OpenCVLoader;
 
 import java.util.ArrayList;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
+    private static final int CAMERA_PERMISSION_CODE = 100;
     private boolean isMyShelfSelected = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+
+        if (!OpenCVLoader.initLocal()) {
+            Log.e("OpenCV", "OpenCV initialization failed!");
+            Toast.makeText(this, "OpenCV initialization failed!", Toast.LENGTH_LONG).show();
+            return;
+        } else {
+            Log.d("OpenCV", "OpenCV initialized successfully");
+        }
+
+        // Request Camera Permission if not granted
+        if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
+            Log.d("CameraActivity", "Camera permission granted");
+        } else {
+            Log.d("CameraActivity", "Camera permission already granted");
+            // Start the pupil detection service in the background
+        }
+
         setContentView(R.layout.activity_main);
 
         this.initMyMyBooksFiltersButton();
@@ -36,12 +64,6 @@ public class MainActivity extends AppCompatActivity {
         mockedBooks.add(new Book("Meditations", "Marcus Aurelius", "meditations.pdf"));
         mockedBooks.add(new Book("Harry Potter and the Philosopher's Stone", "J.K. Rowling", "harry_potter_and_the_philosophers_stone.pdf"));
         this.initAllBooksLayout(mockedBooks);
-
-        Button btnOpenCamera = findViewById(R.id.btnOpenCamera);
-        btnOpenCamera.setOnClickListener(view -> {
-            Intent intent = new Intent(MainActivity.this, CameraActivity.class);
-            startActivity(intent);
-        });
     }
 
     private void initAllBooksLayout(List<Book> books) {

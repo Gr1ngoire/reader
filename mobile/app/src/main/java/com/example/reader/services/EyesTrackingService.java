@@ -1,8 +1,43 @@
 package com.example.reader.services;
 
-import android.content.Context;
-import android.util.Log;
+import static android.graphics.ImageFormat.YUV_420_888;
+import static org.opencv.videoio.Videoio.CAP_ANDROID;
+import static org.opencv.videoio.Videoio.CAP_ANY;
 
+import android.Manifest;
+import android.app.Notification;
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.Service;
+import android.content.Context;
+import android.content.Intent;
+import android.content.pm.PackageManager;
+import android.hardware.camera2.CameraAccessException;
+import android.hardware.camera2.CameraCaptureSession;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
+import android.media.Image;
+import android.media.ImageReader;
+import android.os.Bundle;
+import android.os.Handler;
+import android.os.HandlerThread;
+import android.os.IBinder;
+import android.os.Looper;
+import android.util.Log;
+import android.widget.Toast;
+
+import androidx.annotation.NonNull;
+import androidx.core.app.ActivityCompat;
+import androidx.core.app.NotificationCompat;
+import androidx.core.content.ContextCompat;
+
+import com.example.reader.R;
+
+import org.opencv.android.CameraBridgeViewBase;
+import org.opencv.android.OpenCVLoader;
+import org.opencv.core.CvType;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
@@ -15,28 +50,224 @@ import org.opencv.features2d.SimpleBlobDetector_Params;
 import org.opencv.imgproc.CLAHE;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.objdetect.CascadeClassifier;
+import org.opencv.videoio.VideoCapture;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 
-public class EyesTrackingService {
+public class EyesTrackingService extends Service {
     private static final String TAG = "FaceDetectionService";
     private CascadeClassifier faceCascade;
     private CascadeClassifier eyesCascade;
     private SimpleBlobDetector pupilDetector;
-    public EyesTrackingService(Context context) {
+    private CameraBridgeViewBase cameraView;
+    private VideoCapture videoCapture;
+    private Handler handler;
+    private boolean isRunning = false;
+    private final int CAMERA_INDEX = 1;
+    private CameraManager cameraManager;
+    private CameraDevice cameraDevice;
+    private Handler backgroundHandler;
+    private HandlerThread backgroundThread;
+    private ImageReader imageReader;
+    public EyesTrackingService() {
+        super();
+    }
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+
         try {
+            Context context = getApplicationContext();
             this.faceCascade = loadCascade(context, "haarcascade_frontalface_default.xml");
             this.eyesCascade = loadCascade(context, "haarcascade_eye.xml");
             this.pupilDetector = loadPupilDetector();
         } catch (IOException error) {
             Log.e(TAG, "Error loading detectors", error);
         }
+
+        startForegroundService();
+        startBackgroundThread();
+        openFrontCamera();
+    }
+
+    private void startForegroundService() {
+        NotificationChannel channel = new NotificationChannel("eye_tracking", "Eye Tracking", NotificationManager.IMPORTANCE_LOW);
+        NotificationManager manager = getSystemService(NotificationManager.class);
+        manager.createNotificationChannel(channel);
+
+        Notification notification = new Notification.Builder(this, "eye_tracking")
+                .setContentTitle("Camera Processing")
+                .setContentText("Processing frames...")
+                .setSmallIcon(R.drawable.ic_launcher_foreground)
+                .build();
+
+        startForeground(1, notification);
+    }
+
+    private void startBackgroundThread() {
+        backgroundThread = new HandlerThread("CameraBackground");
+        backgroundThread.start();
+        backgroundHandler = new Handler(backgroundThread.getLooper());
+    }
+
+    private void openFrontCamera() {
+        cameraManager = (CameraManager) getSystemService(Context.CAMERA_SERVICE);
+        try {
+            if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
+                Log.e("CAMERA PERMISSION", "NOT GRANTED BIIIIIIITCH");
+                return; // Don't proceed if permission isn't granted
+            }
+            String frontCameraId = getFrontCameraId();
+            imageReader = ImageReader.newInstance(640, 480, YUV_420_888, 2);
+            imageReader.setOnImageAvailableListener(image -> processFrame(image), backgroundHandler);
+
+            cameraManager.openCamera(frontCameraId, new CameraDevice.StateCallback() {
+                @Override
+                public void onOpened(@NonNull CameraDevice camera) {
+                    cameraDevice = camera;
+                    startCameraPreview();
+                }
+
+                @Override
+                public void onDisconnected(@NonNull CameraDevice camera) {
+                    camera.close();
+                }
+
+                @Override
+                public void onError(@NonNull CameraDevice camera, int error) {
+                    camera.close();
+                }
+            }, backgroundHandler);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    private String getFrontCameraId() throws CameraAccessException {
+        for (String cameraId : cameraManager.getCameraIdList()) {
+            CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+            Integer lensFacing = characteristics.get(CameraCharacteristics.LENS_FACING);
+            if (lensFacing != null && lensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+                return cameraId;
+            }
+        }
+        return null;
+    }
+
+    private void startCameraPreview() {
+        try {
+            CaptureRequest.Builder previewRequestBuilder = cameraDevice.createCaptureRequest(CameraDevice.TEMPLATE_PREVIEW);
+            previewRequestBuilder.addTarget(imageReader.getSurface());
+
+            cameraDevice.createCaptureSession(Collections.singletonList(imageReader.getSurface()), new CameraCaptureSession.StateCallback() {
+                @Override
+                public void onConfigured(@NonNull CameraCaptureSession session) {
+                    try {
+                        session.setRepeatingRequest(previewRequestBuilder.build(), null, backgroundHandler);
+                    } catch (CameraAccessException e) {
+                        e.printStackTrace();
+                    }
+                }
+
+                @Override
+                public void onConfigureFailed(@NonNull CameraCaptureSession session) {}
+            }, backgroundHandler);
+        } catch (CameraAccessException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void processFrame(ImageReader reader) {
+        Image image = reader.acquireLatestImage();
+        if (image != null) {
+            Mat frame = convertYUVtoMat(image);
+            processOpenCVFrame(frame);
+            image.close();
+        }
+    }
+
+    private Mat convertYUVtoMat(Image image) {
+        ByteBuffer buffer = image.getPlanes()[0].getBuffer();
+        byte[] bytes = new byte[buffer.remaining()];
+        buffer.get(bytes);
+        Mat yuv = new Mat(image.getHeight() + image.getHeight() / 2, image.getWidth(), CvType.CV_8UC1);
+        yuv.put(0, 0, bytes);
+        Mat rgb = new Mat();
+        Imgproc.cvtColor(yuv, rgb, Imgproc.COLOR_YUV2RGB_NV21);
+        return rgb;
+    }
+
+    private void processOpenCVFrame(Mat frame) {
+        Rect[] faces = this.detectFaces(frame);
+        if (faces.length > 0) {
+            Log.i("FACES", Arrays.toString(faces));
+        }
+        for (Rect face : faces) {
+            Mat faceFrame = frame.submat(face);
+            Rect[] eyes = this.detectEyes(faceFrame);
+
+            Log.i("EYES", Arrays.toString(eyes));
+            for (Rect eye : eyes) {
+                Mat eyeFrame = faceFrame.submat(eye);
+                MatOfKeyPoint pupils = this.detectPupils(eyeFrame, eye);
+
+                Log.i("PUPILS", pupils.toString());
+
+                // Send pupil data to PdfViewerActivity
+                sendPupilData(pupils, eye);
+            }
+        }
+    }
+
+    private void sendPupilData(MatOfKeyPoint pupils, Rect eye) {
+        if (!pupils.empty()) {
+            for (KeyPoint keyPoint : pupils.toList()) {
+                float pupilX = (float) keyPoint.pt.x;
+                float pupilY = (float) keyPoint.pt.y;
+                float eyeCenterX = eye.x + eye.width / 2.0f;
+                float eyeCenterY = eye.y + eye.height / 2.0f;
+
+                float offsetX = pupilX - eyeCenterX;
+                float offsetY = pupilY - eyeCenterY;
+
+                // Send the offset values using Broadcast
+                Intent intent = new Intent("PUPIL_MOVEMENT");
+                intent.putExtra("offsetX", offsetX);
+                intent.putExtra("offsetY", offsetY);
+                sendBroadcast(intent);
+            }
+        }
+    }
+
+    @Override
+    public int onStartCommand(Intent intent, int flags, int startId) {
+        return START_STICKY;
+    }
+
+    @Override
+    public IBinder onBind(Intent intent) {
+        return null;
+    }
+
+    @Override
+    public void onDestroy() {
+        isRunning = false;
+        if (cameraDevice != null) {
+            cameraDevice.close();
+        }
+        if (backgroundThread != null) {
+            backgroundThread.quitSafely();
+        }
+        super.onDestroy();
     }
     public Rect[] detectFaces(Mat inputFrame) {
         MatOfRect faces = new MatOfRect();
@@ -180,19 +411,6 @@ public class EyesTrackingService {
         SimpleBlobDetector_Params params = new SimpleBlobDetector_Params();
         params.set_filterByArea(true);
         params.set_maxArea(1500);
-
-//        params.set_minArea(10); // You can adjust this value to suit the pupil size
-//        params.set_maxArea(1500);
-//        // Filter by circularity (pupil is generally round)
-//        params.set_filterByCircularity(false);
-//        params.set_minCircularity(0.6f); // Higher values are more circular
-//        // Filter by convexity (pupil is convex)
-//        params.set_filterByConvexity(true);
-//        params.set_minConvexity(0.8f);
-//
-//        // Filter by inertia (optional, can help reject non-pupil blobs)
-//        params.set_filterByInertia(true);
-//        params.set_minInertiaRatio(0.5f);
 
         return SimpleBlobDetector.create(params);
     }
