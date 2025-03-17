@@ -53,6 +53,7 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
     private VideoCapture videoCapture;
     private Mat frame;
     private ImageView imageView;
+    private ImageView imageView2;
     private CameraBridgeViewBase openCvCameraView;
     private Handler handler;
     private boolean isCameraRunning = false;
@@ -78,6 +79,7 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
         }
 
         imageView = findViewById(R.id.cameraFrame);
+        imageView2 = findViewById(R.id.cameraFrame2);
         openCvCameraView = findViewById(R.id.cameraView);
 
         frame = new Mat();
@@ -264,7 +266,7 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
 
         // Detect faces
         Rect[] faces = eyesTrackingService.detectFaces(frame);
-        Log.d("CameraActivity", "Detected faces: " + faces.length);
+      //  Log.d("CameraActivity", "Detected faces: " + faces.length);
         for (Rect face : faces) {
             Imgproc.rectangle(frame, face.tl(), face.br(), new Scalar(255, 0, 0), 2);
 
@@ -276,16 +278,16 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
                 Imgproc.rectangle(faceFrame, eye.tl(), eye.br(), new Scalar(0, 255, 0), 2);
 
                 Mat eyeFrame = faceFrame.submat(eye);
-                Log.d("CameraActivity", "Detected eyes: " + eyes.length);
+               // Log.d("CameraActivity", "Detected eyes: " + eyes.length);
 
                 // Cut eyebrows and process pupils
                 Mat eyeWithoutBrows = eyesTrackingService.cutEyebrows(eyeFrame);
-                MatOfKeyPoint pupils = eyesTrackingService.detectPupils(eyeWithoutBrows, eye);
+                MatOfKeyPoint pupils = eyesTrackingService.detectPupils(eyeWithoutBrows, eye, imageView2);
 
-                Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
+                //Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
 
                 // Log pupil positions
-                Log.d("Frame processing", "Detected pupils: " + pupils.toArray().length);
+               // Log.d("Frame processing", "Detected pupils: " + pupils.toArray().length);
 
                 for (KeyPoint pupil : pupils.toArray()) {
                     Point pupilCenter = new Point(pupil.pt.x, pupil.pt.y);
