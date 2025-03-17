@@ -384,9 +384,14 @@ public class EyesTrackingService extends Service {
         Mat gray = new Mat();
         Imgproc.cvtColor(eyeFrame, gray, Imgproc.COLOR_BGR2GRAY);
 
+        double meanBrightness = Core.mean(gray).val[0];
+        double clipLimit = meanBrightness < 50 ? 5.0 : 1.5;
+
+        Imgproc.equalizeHist(gray, gray);
+
         Mat claheOutput = new Mat();
         CLAHE clahe = Imgproc.createCLAHE();
-        clahe.setClipLimit(2.0); // Adjust contrast limit
+        clahe.setClipLimit(clipLimit); // Adjust contrast limit
         clahe.setTilesGridSize(new Size(8, 8)); // Adjust grid size
         clahe.apply(gray, claheOutput);
 
@@ -395,7 +400,6 @@ public class EyesTrackingService extends Service {
                 Imgproc.ADAPTIVE_THRESH_MEAN_C,
                 Imgproc.THRESH_BINARY_INV, 15, 5);
 
-//        Imgproc.threshold(gray, gray, threshold, 255, Imgproc.THRESH_BINARY);
         Imgproc.erode(adaptiveThresholded, adaptiveThresholded, new Mat(), new Point(-1, -1), 2);
         Imgproc.dilate(adaptiveThresholded, adaptiveThresholded, new Mat(), new Point(-1, -1), 4);
         Imgproc.medianBlur(adaptiveThresholded, adaptiveThresholded, 5);
@@ -409,14 +413,11 @@ public class EyesTrackingService extends Service {
             // Calculate the distance of the keypoint from the eye center
             double distance = Math.sqrt(Math.pow(keyPoint.pt.x - eyeCenter.x, 2) +
                     Math.pow(keyPoint.pt.y - eyeCenter.y, 2));
+            Log.d("DISTANCO", "" + distance);
             // Keep only the keypoints that are within a certain distance from the eye center
-            if (distance < 0.2) {  // Adjust this threshold as necessary
+            if (distance < 270) {  // Adjust this threshold as necessary
                 filteredKeyPoints.add(keyPoint);
             }
-//            if (eye.contains(new Point(keyPoint.pt.x, keyPoint.pt.y))) {  // Ensure the keypoint is inside the detected eye region
-//                filteredKeyPoints.add(keyPoint);
-//            }
-            filteredKeyPoints.add(keyPoint);
         }
 
         // Step 8: Sort the keypoints by size (larger blobs are more likely to be the pupil)
