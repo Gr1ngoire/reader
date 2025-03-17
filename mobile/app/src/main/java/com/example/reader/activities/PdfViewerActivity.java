@@ -27,6 +27,7 @@ public class PdfViewerActivity extends AppCompatActivity {
             Log.d("DELTA", String.format(String.valueOf(offsetY)));
 
             // Scroll the PDF based on detected pupil movement
+            Toast.makeText(context, "Received delta!" + offsetY, Toast.LENGTH_LONG).show();
             scrollPdf(offsetY);
         }
     };
