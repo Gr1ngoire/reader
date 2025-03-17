@@ -65,15 +65,14 @@ public class PdfViewerActivity extends AppCompatActivity {
     }
 
     private void scrollPdf(float deltaY) {
-        float cellarSensitivity = 100;
-        float cellarSensitivityNormalizer = cellarSensitivity;
-        float bottomSensitivity = -cellarSensitivity;
-        float bottomSensitivityNormalizer = 105;
+        float sensitivityBooster = 10;
+        float cellarSensitivity = 90;
+        float bottomSensitivity = 93;
         float moveDelta = 0;
-        if (deltaY <= -bottomSensitivityNormalizer) {
-            moveDelta = (deltaY + bottomSensitivityNormalizer) + bottomSensitivity;
-        } else if (deltaY >= -cellarSensitivityNormalizer) {
-            moveDelta = (deltaY + cellarSensitivityNormalizer) + cellarSensitivity;
+        if (deltaY <= -bottomSensitivity) {
+            moveDelta = (deltaY + bottomSensitivity) * sensitivityBooster;
+        } else if (deltaY >= -cellarSensitivity) {
+            moveDelta = (deltaY + cellarSensitivity) * sensitivityBooster;
         } else {
             moveDelta = 0;
         }

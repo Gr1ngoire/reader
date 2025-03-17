@@ -239,11 +239,17 @@ public class EyesTrackingService extends Service {
 
         // Convert to RGBA
         Mat rgbMat = new Mat();
-        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGBA_NV21);
+        // For my phone
+        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGB_I420);
+        // For usb web cam
+//        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGBA_NV21);
 
         // Rotate to correct orientation
         Mat rotatedMat = new Mat();
-        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_CLOCKWISE);
+        // For my phone
+        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_COUNTERCLOCKWISE);
+        // For usb web cam
+//        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_CLOCKWISE);
 
         return rotatedMat;
     }
