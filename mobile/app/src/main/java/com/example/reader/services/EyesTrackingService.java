@@ -22,6 +22,7 @@ import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
 import android.util.Log;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
@@ -278,7 +279,7 @@ public class EyesTrackingService extends Service {
 
                 if (pupils.toArray().length > 0) {
 //                    Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
-                    sendPupilData(pupils, eye);
+                    sendPupilData(pupils, eye, face);
                 }
 
                 for (KeyPoint pupil : pupils.toArray()) {
@@ -291,20 +292,19 @@ public class EyesTrackingService extends Service {
 
     }
 
-    private void sendPupilData(MatOfKeyPoint pupils, Rect eye) {
+    private void sendPupilData(MatOfKeyPoint pupils, Rect eye, Rect face) {
         for (KeyPoint keyPoint : pupils.toList()) {
-            float pupilX = (float) keyPoint.pt.x;
-            float pupilY = (float) keyPoint.pt.y;
-            float eyeCenterX = eye.x + eye.width / 2.0f;
-            float eyeCenterY = eye.y + eye.height / 2.0f;
+            double pupilY = face.y + eye.y + keyPoint.pt.y;
+            double eyeCenterY = face.y + eye.y + ((double) eye.height / 3.2);
 
-            float offsetX = pupilX - eyeCenterX;
-            float offsetY = pupilY - eyeCenterY;
+//            Log.d("EYE PARTS", eye.y + " " + eye.height);
+//            Log.d("FACE PARTS", face.y + " " + face.height);
 
             // Send the offset values using Broadcast
             Intent intent = new Intent("PUPIL_MOVEMENT");
-//            intent.putExtra("offsetX", offsetX);
-            intent.putExtra("offsetY", offsetY);
+            intent.putExtra("pupilY", (float) pupilY);
+            intent.putExtra("eyeLineY", (float) eyeCenterY);
+            //Toast.makeText(this, "PUPIL EYE: " + pupilY + " " + eyeCenterY, Toast.LENGTH_SHORT).show();
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
         }
     }
@@ -419,11 +419,12 @@ public class EyesTrackingService extends Service {
             // Calculate the distance of the keypoint from the eye center
             double distance = Math.sqrt(Math.pow(keyPoint.pt.x - eyeCenter.x, 2) +
                     Math.pow(keyPoint.pt.y - eyeCenter.y, 2));
-            Log.d("DISTANCO", "" + distance);
+//            Log.d("DISTANCO", "" + distance);
             // Keep only the keypoints that are within a certain distance from the eye center
-            if (distance < 270) {  // Adjust this threshold as necessary
-                filteredKeyPoints.add(keyPoint);
-            }
+//            if (distance < 400) {  // Adjust this threshold as necessary
+//                filteredKeyPoints.add(keyPoint);
+//            }
+            filteredKeyPoints.add(keyPoint);
         }
 
         // Step 8: Sort the keypoints by size (larger blobs are more likely to be the pupil)

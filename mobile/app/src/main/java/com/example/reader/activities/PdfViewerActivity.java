@@ -19,16 +19,17 @@ import java.io.File;
 
 public class PdfViewerActivity extends AppCompatActivity {
     private PDFView pdfView;
+    private float eyesLine = 0;
+    private float pupilY = 0;
 
     private final BroadcastReceiver pupilMovementReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            float offsetY = intent.getFloatExtra("offsetY", 0);
-            Log.d("DELTA", String.format(String.valueOf(offsetY)));
+            float pupilY = intent.getFloatExtra("pupilY", 0);
+            float eyeLineY = intent.getFloatExtra("eyeLineY", 0);
 
             // Scroll the PDF based on detected pupil movement
-            Toast.makeText(context, "Received delta!" + offsetY, Toast.LENGTH_LONG).show();
-            scrollPdf(offsetY);
+            scrollPdf(pupilY, eyeLineY);
         }
     };
     @Override
@@ -62,21 +63,23 @@ public class PdfViewerActivity extends AppCompatActivity {
     protected void onPause() {
         super.onPause();
         unregisterReceiver(pupilMovementReceiver);
+        this.eyesLine = 0;
     }
 
-    private void scrollPdf(float deltaY) {
-        float sensitivityBooster = 10;
-        float cellarSensitivity = 90;
-        float bottomSensitivity = 93;
-        float moveDelta = 0;
-        if (deltaY <= -bottomSensitivity) {
-            moveDelta = (deltaY + bottomSensitivity) * sensitivityBooster;
-        } else if (deltaY >= -cellarSensitivity) {
-            moveDelta = (deltaY + cellarSensitivity) * sensitivityBooster;
-        } else {
-            moveDelta = 0;
-        }
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        unregisterReceiver(pupilMovementReceiver);
+        this.eyesLine = 0;
+    }
 
-        pdfView.moveRelativeTo(0, moveDelta); // Adjust sensitivity factor
+    private void scrollPdf(float pupilY, float eyeLineY) {
+        float previousEyeLine = this.eyesLine > 0 ? this.eyesLine : eyeLineY;
+        this.eyesLine = (previousEyeLine + eyeLineY) / 2;
+//        Log.d("PUPIL Y", this.pupilY + "");
+//        Log.d("EYE LINE", this.eyesLine + "");
+        float moveDelta = this.eyesLine - pupilY;
+        Toast.makeText(this, "DELTA" + " " + moveDelta, Toast.LENGTH_SHORT).show();
+        pdfView.moveRelativeTo(0, moveDelta  * 10); // Adjust sensitivity factor
     }
 }
