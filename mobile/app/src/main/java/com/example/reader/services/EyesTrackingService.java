@@ -295,7 +295,7 @@ public class EyesTrackingService extends Service {
     private void sendPupilData(MatOfKeyPoint pupils, Rect eye, Rect face) {
         for (KeyPoint keyPoint : pupils.toList()) {
             double pupilY = face.y + eye.y + keyPoint.pt.y;
-            double eyeCenterY = face.y + eye.y + ((double) eye.height / 3.2);
+            double eyeCenterY = face.y + eye.y + ((double) eye.height / 3.3);
 
 //            Log.d("EYE PARTS", eye.y + " " + eye.height);
 //            Log.d("FACE PARTS", face.y + " " + face.height);

@@ -79,6 +79,11 @@ public class PdfViewerActivity extends AppCompatActivity {
 //        Log.d("PUPIL Y", this.pupilY + "");
 //        Log.d("EYE LINE", this.eyesLine + "");
         float moveDelta = this.eyesLine - pupilY;
+
+        if (Math.abs(moveDelta) <= 3) {
+            return;
+        }
+
         Toast.makeText(this, "DELTA" + " " + moveDelta, Toast.LENGTH_SHORT).show();
         pdfView.moveRelativeTo(0, moveDelta  * 10); // Adjust sensitivity factor
     }
