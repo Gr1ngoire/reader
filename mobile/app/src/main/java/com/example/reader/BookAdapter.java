@@ -19,7 +19,6 @@ import com.example.reader.services.BooksService;
 
 import java.io.IOException;
 import java.util.List;
-import java.util.Objects;
 
 public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder> {
     private final List<Book> books;
@@ -63,14 +62,16 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
         holder.itemView.setOnClickListener(event -> {
             new Thread(() -> {
                 try {
-                    String downloadedBookFilePath = booksService.getBookContent(book.getBookFileName());
-                    Intent intent = new Intent(context, PdfViewerActivity.class);
-                    intent.putExtra("filePath", downloadedBookFilePath);
-                    context.startActivity(intent);
+                    String downloadedBookFilePath = booksService.getBookContentFromS3(book.getBookFileName());
+                    Intent book_content_intent = new Intent(context, PdfViewerActivity.class);
+                    book_content_intent.putExtra("filePath", downloadedBookFilePath);
+                    context.startActivity(book_content_intent);
+                    Log.i("Successfully loaded book", downloadedBookFilePath);
                 } catch (ActivityNotFoundException e) {
-                    Log.println(Log.ERROR, "INFO", Objects.requireNonNull(e.getMessage()));
+                    Log.e("ERROR on loading book", "INFO", e);
                     Toast.makeText(context, "No PDF viewer found!", Toast.LENGTH_SHORT).show();
                 } catch (IOException e) {
+                    Log.e("Huy znaet chto za oshibka", "INFO", e);
                     throw new RuntimeException(e);
                 }
             }).start();
