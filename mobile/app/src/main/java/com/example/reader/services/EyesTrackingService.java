@@ -35,6 +35,8 @@ import org.opencv.core.CvType;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
@@ -383,6 +385,56 @@ public class EyesTrackingService extends Service {
         }
 
         return filteredEyes.toArray(new Rect[0]);
+    }
+
+    public MatOfKeyPoint betterDetectPupils(Mat eyeFrame) {
+        // Convert to grayscale
+        Mat gray = new Mat();
+        Imgproc.cvtColor(eyeFrame, gray, Imgproc.COLOR_BGR2GRAY);
+
+        // Apply Gaussian blur to reduce noise
+        Imgproc.GaussianBlur(gray, gray, new Size(7, 7), 0);
+
+        // Apply inverse thresholding to highlight dark pupils
+        Imgproc.threshold(gray, gray, 30, 255, Imgproc.THRESH_BINARY_INV | Imgproc.THRESH_OTSU);
+
+        // Find contours
+        List<MatOfPoint> contours = new ArrayList<>();
+        Mat hierarchy = new Mat();
+        Imgproc.findContours(gray, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
+        // Find the largest circular contour (likely the pupil)
+        double maxArea = 0;
+        Point bestPupilCenter = null;
+        float bestPupilRadius = 0;
+
+        for (MatOfPoint contour : contours) {
+            double area = Imgproc.contourArea(contour);
+            if (area > 50 && area < 5000) { // Filter out noise and large objects
+                // Fit an enclosing circle around the contour
+                MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+                Point center = new Point();
+                float[] radius = new float[1];
+                Imgproc.minEnclosingCircle(contour2f, center, radius);
+
+                // Ensure the detected region is roughly circular
+                double circularity = 4 * Math.PI * (area / (Math.pow(radius[0] * 2, 2)));
+                if (circularity > 0.5 && area > maxArea) {
+                    maxArea = area;
+                    bestPupilCenter = center;
+                    bestPupilRadius = radius[0];
+                }
+            }
+        }
+
+        // Store detected pupil as a keypoint
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
+        if (bestPupilCenter != null) {
+            KeyPoint keypoint = new KeyPoint((float) bestPupilCenter.x, (float) bestPupilCenter.y, bestPupilRadius * 2);
+            keypoints.fromArray(new KeyPoint[]{keypoint});
+        }
+
+        return keypoints;
     }
 
     public MatOfKeyPoint detectPupils(Mat eyeFrame, Rect eye) {
