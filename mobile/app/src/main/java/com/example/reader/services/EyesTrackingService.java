@@ -277,7 +277,7 @@ public class EyesTrackingService extends Service {
 
                 // Cut eyebrows and process pupils
                 Mat eyeWithoutBrows = this.cutEyebrows(eyeFrame);
-                MatOfKeyPoint pupils = this.detectPupils(eyeWithoutBrows, eye);
+                MatOfKeyPoint pupils = this.detectPupils(eyeWithoutBrows);
 
                 if (pupils.toArray().length > 0) {
 //                    Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
@@ -387,7 +387,7 @@ public class EyesTrackingService extends Service {
         return filteredEyes.toArray(new Rect[0]);
     }
 
-    public MatOfKeyPoint betterDetectPupils(Mat eyeFrame) {
+    public MatOfKeyPoint detectPupils(Mat eyeFrame) {
         // Convert to grayscale
         Mat gray = new Mat();
         Imgproc.cvtColor(eyeFrame, gray, Imgproc.COLOR_BGR2GRAY);
@@ -437,7 +437,7 @@ public class EyesTrackingService extends Service {
         return keypoints;
     }
 
-    public MatOfKeyPoint detectPupils(Mat eyeFrame, Rect eye) {
+    public MatOfKeyPoint v_detectPupils(Mat eyeFrame, Rect eye) {
         Point eyeCenter = new Point(eye.x + eye.width / 2.0, eye.y + eye.height / 2.0);
         Mat gray = new Mat();
         Imgproc.cvtColor(eyeFrame, gray, Imgproc.COLOR_BGR2GRAY);
