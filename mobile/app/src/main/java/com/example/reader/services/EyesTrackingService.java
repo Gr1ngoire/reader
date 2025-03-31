@@ -10,6 +10,8 @@ import org.opencv.core.Core;
 import org.opencv.core.KeyPoint;
 import org.opencv.core.Mat;
 import org.opencv.core.MatOfKeyPoint;
+import org.opencv.core.MatOfPoint;
+import org.opencv.core.MatOfPoint2f;
 import org.opencv.core.MatOfRect;
 import org.opencv.core.Point;
 import org.opencv.core.Rect;
@@ -111,7 +113,70 @@ public class EyesTrackingService {
         });
     }
 
-    public MatOfKeyPoint detectPupils(Mat eyeFrame, Rect eye, ImageView imageView) {
+    public MatOfKeyPoint detectPupils(Mat eyeFrame, Rect eye) {
+        Point eyeCenter = new Point(eye.x + eye.width / 2.0, eye.y + eye.height / 2.0);
+        // Convert to grayscale
+        Mat gray = new Mat();
+        Imgproc.cvtColor(eyeFrame, gray, Imgproc.COLOR_BGR2GRAY);
+
+        // Apply Gaussian blur to reduce noise
+        Imgproc.GaussianBlur(gray, gray, new Size(7, 7), 0);
+
+        // Apply inverse thresholding to highlight dark pupils
+        Imgproc.threshold(gray, gray, 30, 255, Imgproc.THRESH_BINARY_INV | Imgproc.THRESH_OTSU);
+
+        // Find contours
+        List<MatOfPoint> contours = new ArrayList<>();
+        Mat hierarchy = new Mat();
+        Imgproc.findContours(gray, contours, hierarchy, Imgproc.RETR_EXTERNAL, Imgproc.CHAIN_APPROX_SIMPLE);
+
+        // Find the largest circular contour (likely the pupil)
+        double maxArea = 0;
+        Point bestPupilCenter = null;
+        float bestPupilRadius = 0;
+
+        for (MatOfPoint contour : contours) {
+            double area = Imgproc.contourArea(contour);
+            if (area > 50 && area < 5000) { // Filter out noise and large objects
+                // Fit an enclosing circle around the contour
+                MatOfPoint2f contour2f = new MatOfPoint2f(contour.toArray());
+                Point center = new Point();
+                float[] radius = new float[1];
+                Imgproc.minEnclosingCircle(contour2f, center, radius);
+
+                // Ensure the detected region is roughly circular
+                double circularity = 4 * Math.PI * (area / (Math.pow(radius[0] * 2, 2)));
+                if (circularity > 0.5 && area > maxArea) {
+                    maxArea = area;
+                    bestPupilCenter = center;
+                    bestPupilRadius = radius[0];
+                }
+            }
+        }
+
+        MatOfKeyPoint keypoints = new MatOfKeyPoint();
+        if (bestPupilCenter == null) {
+            return keypoints;
+        }
+
+        double distance = Math.sqrt(
+                Math.pow(bestPupilCenter.x - eyeCenter.x, 2) +
+                Math.pow(bestPupilCenter.y - eyeCenter.y, 2));
+        Log.d("DISTANCO", "" + distance);
+        // Keep only the keypoints that are within a certain distance from the eye center
+        if (distance > 200) {
+            return keypoints;
+        }
+
+        // Store detected pupil as a keypoint
+        KeyPoint keypoint = new KeyPoint((float) bestPupilCenter.x, (float) bestPupilCenter.y, bestPupilRadius * 2);
+        keypoints.fromArray(keypoint);
+
+        return keypoints;
+    }
+
+
+    public MatOfKeyPoint v_detectPupils(Mat eyeFrame, Rect eye, ImageView imageView) {
         Point eyeCenter = new Point(eye.x + eye.width / 2.0, eye.y + eye.height / 2.0);
         Mat gray = new Mat();
         Imgproc.cvtColor(eyeFrame, gray, Imgproc.COLOR_BGR2GRAY);

@@ -252,16 +252,16 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
         // Convert to RGBA
         Mat rgbMat = new Mat();
         // For my phone
-        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGB_I420);
+//        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGB_I420);
         // For usb web cam
-//        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGBA_NV21);
+        Imgproc.cvtColor(yuvMat, rgbMat, Imgproc.COLOR_YUV2RGBA_NV21);
 
         // Rotate to correct orientation
         Mat rotatedMat = new Mat();
         // For my phone
-        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_COUNTERCLOCKWISE);
+        //Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_COUNTERCLOCKWISE);
         // For usb web cam
-//        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_CLOCKWISE);
+        Core.rotate(rgbMat, rotatedMat, Core.ROTATE_90_CLOCKWISE);
 
         return rotatedMat;
     }
@@ -288,7 +288,7 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
 
                 // Cut eyebrows and process pupils
                 Mat eyeWithoutBrows = eyesTrackingService.cutEyebrows(eyeFrame);
-                MatOfKeyPoint pupils = eyesTrackingService.detectPupils(eyeWithoutBrows, eye, imageView2);
+                MatOfKeyPoint pupils = eyesTrackingService.detectPupils(eyeWithoutBrows, eye);
 
                 //Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
 
@@ -301,8 +301,6 @@ public class CameraActivity extends AppCompatActivity implements CameraBridgeVie
                 }
             }
         }
-
-        Log.d("DEBUG", "Frame processed");
 
         Bitmap bitmapToDisplay = Bitmap.createBitmap(frame.cols(), frame.rows(), Bitmap.Config.ARGB_8888);
         Utils.matToBitmap(frame, bitmapToDisplay);
