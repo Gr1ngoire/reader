@@ -277,10 +277,12 @@ public class EyesTrackingService extends Service {
 
                 // Cut eyebrows and process pupils
                 Mat eyeWithoutBrows = this.cutEyebrows(eyeFrame);
-                MatOfKeyPoint pupils = this.detectPupils(eyeWithoutBrows);
+                MatOfKeyPoint pupils = this.detectPupils(eyeWithoutBrows, eye);
+
+                Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
 
                 if (pupils.toArray().length > 0) {
-//                    Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
+                    Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
                     sendPupilData(pupils, eye, face);
                 }
 
@@ -387,7 +389,8 @@ public class EyesTrackingService extends Service {
         return filteredEyes.toArray(new Rect[0]);
     }
 
-    public MatOfKeyPoint detectPupils(Mat eyeFrame) {
+    public MatOfKeyPoint detectPupils(Mat eyeFrame, Rect eye) {
+        Point eyeCenter = new Point(eye.x + eye.width / 2.0, eye.y + eye.height / 2.0);
         // Convert to grayscale
         Mat gray = new Mat();
         Imgproc.cvtColor(eyeFrame, gray, Imgproc.COLOR_BGR2GRAY);
@@ -427,12 +430,23 @@ public class EyesTrackingService extends Service {
             }
         }
 
-        // Store detected pupil as a keypoint
         MatOfKeyPoint keypoints = new MatOfKeyPoint();
-        if (bestPupilCenter != null) {
-            KeyPoint keypoint = new KeyPoint((float) bestPupilCenter.x, (float) bestPupilCenter.y, bestPupilRadius * 2);
-            keypoints.fromArray(new KeyPoint[]{keypoint});
+        if (bestPupilCenter == null) {
+            return keypoints;
         }
+
+        double distance = Math.sqrt(
+                Math.pow(bestPupilCenter.x - eyeCenter.x, 2) +
+                        Math.pow(bestPupilCenter.y - eyeCenter.y, 2));
+        Log.d("DISTANCO", "" + distance);
+        // Keep only the keypoints that are within a certain distance from the eye center
+        if (distance > 200) {
+            return keypoints;
+        }
+
+        // Store detected pupil as a keypoint
+        KeyPoint keypoint = new KeyPoint((float) bestPupilCenter.x, (float) bestPupilCenter.y, bestPupilRadius * 2);
+        keypoints.fromArray(keypoint);
 
         return keypoints;
     }
