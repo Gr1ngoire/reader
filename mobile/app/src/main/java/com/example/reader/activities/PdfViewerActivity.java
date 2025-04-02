@@ -80,7 +80,7 @@ public class PdfViewerActivity extends AppCompatActivity {
 //        Log.d("EYE LINE", this.eyesLine + "");
         float moveDelta = this.eyesLine - pupilY;
 
-        if (Math.abs(moveDelta) <= 3) {
+        if (Math.abs(moveDelta) <= 6) {
             return;
         }
 
