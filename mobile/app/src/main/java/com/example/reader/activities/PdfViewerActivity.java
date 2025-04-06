@@ -4,7 +4,11 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.graphics.Rect;
 import android.os.Bundle;
+import android.util.Log;
+import android.view.WindowManager;
+import android.view.WindowMetrics;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -89,11 +93,19 @@ public class PdfViewerActivity extends AppCompatActivity {
 //            return;
 //        }
 
-        if (deltaByEyeLine <= 0 && deltaByEyeLine >= -3.4) {
+        WindowMetrics metrics = ((WindowManager) this.getSystemService(Context.WINDOW_SERVICE)).getCurrentWindowMetrics();
+        Rect bounds = metrics.getBounds();
+        float screenHeight = bounds.height();
+
+        float lowerBound = screenHeight / (float) -564.7;
+        // -3.4
+        if (deltaByEyeLine <= 0 && deltaByEyeLine >= lowerBound) {
             return;
         }
 
-        if (deltaByEyeLine >= 0 && deltaByEyeLine <= 2.5) {
+        float upperBound = screenHeight / 768;
+        // 2.5
+        if (deltaByEyeLine >= 0 && deltaByEyeLine <= upperBound) {
             return;
         }
 
