@@ -5,7 +5,6 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Bundle;
-import android.util.Log;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -20,7 +19,7 @@ import java.io.File;
 public class PdfViewerActivity extends AppCompatActivity {
     private PDFView pdfView;
     private float eyesLine = 0;
-    private float pupilY = 0;
+    private float previousPupilY = 0;
 
     private final BroadcastReceiver pupilMovementReceiver = new BroadcastReceiver() {
         @Override
@@ -74,17 +73,35 @@ public class PdfViewerActivity extends AppCompatActivity {
     }
 
     private void scrollPdf(float pupilY, float eyeLineY) {
-        float previousEyeLine = this.eyesLine > 0 ? this.eyesLine : eyeLineY;
-        this.eyesLine = (previousEyeLine + eyeLineY) / 2;
-//        Log.d("PUPIL Y", this.pupilY + "");
-//        Log.d("EYE LINE", this.eyesLine + "");
-        float moveDelta = this.eyesLine - pupilY;
+        float pupilYToUse = pupilY == 0 ? this.previousPupilY : pupilY;
+        //float previousEyeLine = this.eyesLine > 0 ? this.eyesLine : eyeLineY;
+        //float deltaByPreviousEyeLine = previousEyeLine - this.previousPupilY;
+        //this.eyesLine = (previousEyeLine + eyeLineY) / 2;
+        float deltaByEyeLine = -(eyeLineY - pupilYToUse);
+        this.previousPupilY = pupilYToUse;
 
-        if (Math.abs(moveDelta) <= 6) {
+        Toast.makeText(this, "DELTA" + " " + deltaByEyeLine, Toast.LENGTH_SHORT).show();
+
+        // Limit abs diff between previousDeltaByEyeLine and deltaByEyeLine
+
+//        float result = Math.abs(deltaByEyeLine - deltaByPreviousEyeLine);
+//        if (result <= 0.5) {
+//            return;
+//        }
+
+        if (deltaByEyeLine <= 0 && deltaByEyeLine >= -3.4) {
             return;
         }
 
-        Toast.makeText(this, "DELTA" + " " + moveDelta, Toast.LENGTH_SHORT).show();
-        pdfView.moveRelativeTo(0, moveDelta  * 10); // Adjust sensitivity factor
+        if (deltaByEyeLine >= 0 && deltaByEyeLine <= 2.5) {
+            return;
+        }
+
+        //Log.d("PUPIL Y", this.pupilY + "");
+        //Log.d("EYE LINE", this.eyesLine + "");
+
+//        Toast.makeText(this, "DELTA" + " " + deltaByEyeLine, Toast.LENGTH_SHORT).show();
+        pdfView.moveRelativeTo(0, deltaByEyeLine * 3); // Adjust sensitivity factor
+        pdfView.post(() -> pdfView.loadPages());
     }
 }

@@ -283,8 +283,9 @@ public class EyesTrackingService extends Service {
 
                 if (pupils.toArray().length > 0) {
                     Log.d("CameraActivity", "Detected pupils: " + pupils.toArray().length);
-                    sendPupilData(pupils, eye, face);
                 }
+
+                sendPupilData(pupils, eye, face);
 
                 for (KeyPoint pupil : pupils.toArray()) {
                     Point pupilCenter = new Point(pupil.pt.x, pupil.pt.y);
@@ -297,19 +298,25 @@ public class EyesTrackingService extends Service {
     }
 
     private void sendPupilData(MatOfKeyPoint pupils, Rect eye, Rect face) {
+        Intent intent = new Intent("PUPIL_MOVEMENT");
+        double eyeCenterY = face.y + eye.y + ((double) eye.height / 3.4);
+
         for (KeyPoint keyPoint : pupils.toList()) {
             double pupilY = face.y + eye.y + keyPoint.pt.y;
-            double eyeCenterY = face.y + eye.y + ((double) eye.height / 3.8);
 
 //            Log.d("EYE PARTS", eye.y + " " + eye.height);
 //            Log.d("FACE PARTS", face.y + " " + face.height);
 
             // Send the offset values using Broadcast
-            Intent intent = new Intent("PUPIL_MOVEMENT");
             intent.putExtra("pupilY", (float) pupilY);
             intent.putExtra("eyeLineY", (float) eyeCenterY);
             //Toast.makeText(this, "PUPIL EYE: " + pupilY + " " + eyeCenterY, Toast.LENGTH_SHORT).show();
             LocalBroadcastManager.getInstance(this).sendBroadcast(intent);
+        }
+
+        if (pupils.toList().toArray().length == 0) {
+            intent.putExtra("pupilY", 0);
+            intent.putExtra("eyeLineY", (float) eyeCenterY);
         }
     }
 
