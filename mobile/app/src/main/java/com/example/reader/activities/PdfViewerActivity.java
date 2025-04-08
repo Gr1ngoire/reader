@@ -6,7 +6,6 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Rect;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
 import android.widget.Toast;
@@ -15,7 +14,7 @@ import androidx.appcompat.app.AppCompatActivity;
 import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.reader.R;
-import com.example.reader.services.EyesTrackingService;
+import com.example.reader.services.CameraForegroundService;
 import com.github.barteksc.pdfviewer.PDFView;
 
 import java.io.File;
@@ -52,7 +51,7 @@ public class PdfViewerActivity extends AppCompatActivity {
         }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"));
-        Intent serviceIntent = new Intent(this, EyesTrackingService.class);
+        Intent serviceIntent = new Intent(this, CameraForegroundService.class);
         startForegroundService(serviceIntent);
     }
 
