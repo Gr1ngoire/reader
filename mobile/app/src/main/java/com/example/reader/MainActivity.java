@@ -63,8 +63,6 @@ public class MainActivity extends AppCompatActivity {
     }
 
     private void initAllBooksLayout(List<Book> books) {
-        // All books
-
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
 
         // Get screen dimensions

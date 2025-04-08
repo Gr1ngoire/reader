@@ -68,10 +68,8 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
                     context.startActivity(book_content_intent);
                     Log.i("Successfully loaded book", downloadedBookFilePath);
                 } catch (ActivityNotFoundException e) {
-                    Log.e("ERROR on loading book", "INFO", e);
                     Toast.makeText(context, "No PDF viewer found!", Toast.LENGTH_SHORT).show();
                 } catch (IOException e) {
-                    Log.e("Huy znaet chto za oshibka", "INFO", e);
                     throw new RuntimeException(e);
                 }
             }).start();

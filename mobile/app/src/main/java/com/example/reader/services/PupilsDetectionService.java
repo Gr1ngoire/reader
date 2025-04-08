@@ -129,7 +129,8 @@ public class PupilsDetectionService {
                         Math.pow(bestPupilCenter.y - eyeCenter.y, 2));
 
         // Keep only the keypoints that are within a certain distance from the eye center
-        if (distance > 200) {
+        int maximalPupilDistanceToEyeCenter = 200;
+        if (distance > maximalPupilDistanceToEyeCenter) {
             return keypoints;
         }
 

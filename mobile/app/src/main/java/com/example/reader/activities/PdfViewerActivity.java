@@ -81,20 +81,10 @@ public class PdfViewerActivity extends AppCompatActivity {
 
     private void scrollPdf(float pupilY, float eyeLineY) {
         float pupilYToUse = pupilY == 0 ? this.previousPupilY : pupilY;
-        //float previousEyeLine = this.eyesLine > 0 ? this.eyesLine : eyeLineY;
-        //float deltaByPreviousEyeLine = previousEyeLine - this.previousPupilY;
-        //this.eyesLine = (previousEyeLine + eyeLineY) / 2;
         float deltaByEyeLine = -(eyeLineY - pupilYToUse);
         this.previousPupilY = pupilYToUse;
 
         Toast.makeText(this, "DELTA" + " " + deltaByEyeLine, Toast.LENGTH_SHORT).show();
-
-        // Limit abs diff between previousDeltaByEyeLine and deltaByEyeLine
-
-//        float result = Math.abs(deltaByEyeLine - deltaByPreviousEyeLine);
-//        if (result <= 0.5) {
-//            return;
-//        }
 
         WindowMetrics metrics = ((WindowManager) this.getSystemService(Context.WINDOW_SERVICE)).getCurrentWindowMetrics();
         Rect bounds = metrics.getBounds();
@@ -112,10 +102,6 @@ public class PdfViewerActivity extends AppCompatActivity {
             return;
         }
 
-        //Log.d("PUPIL Y", this.pupilY + "");
-        //Log.d("EYE LINE", this.eyesLine + "");
-
-//        Toast.makeText(this, "DELTA" + " " + deltaByEyeLine, Toast.LENGTH_SHORT).show();
         pdfView.moveRelativeTo(0, deltaByEyeLine * 3); // Adjust sensitivity factor
         pdfView.post(() -> pdfView.loadPages());
     }
