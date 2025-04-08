@@ -1,5 +1,9 @@
 package com.example.reader.activities;
 
+import static com.example.reader.CommunicationConstants.EYE_CENTER_ORDINATE_PARAMETER_NAME;
+import static com.example.reader.CommunicationConstants.PUPIL_MOVEMENT_INTENT_NAME;
+import static com.example.reader.CommunicationConstants.PUPIL_ORDINATE_PARAMETER_NAME;
+
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -27,8 +31,8 @@ public class PdfViewerActivity extends AppCompatActivity {
     private final BroadcastReceiver pupilMovementReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            float pupilY = intent.getFloatExtra("pupilY", 0);
-            float eyeLineY = intent.getFloatExtra("eyeLineY", 0);
+            float pupilY = intent.getFloatExtra(PUPIL_ORDINATE_PARAMETER_NAME, 0);
+            float eyeLineY = intent.getFloatExtra(EYE_CENTER_ORDINATE_PARAMETER_NAME, 0);
 
             // Scroll the PDF based on detected pupil movement
             scrollPdf(pupilY, eyeLineY);
@@ -50,7 +54,7 @@ public class PdfViewerActivity extends AppCompatActivity {
             Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
         }
 
-        LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"));
+        LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(PUPIL_MOVEMENT_INTENT_NAME));
         Intent serviceIntent = new Intent(this, CameraForegroundService.class);
         startForegroundService(serviceIntent);
     }
@@ -58,7 +62,7 @@ public class PdfViewerActivity extends AppCompatActivity {
     @Override
     protected void onResume() {
         super.onResume();
-        LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter("PUPIL_MOVEMENT"));
+        LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(PUPIL_MOVEMENT_INTENT_NAME));
     }
 
     @Override

@@ -16,10 +16,10 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
-public class EyesTrackingService {
+public class PupilsDetectionService {
     private final CascadeClassifier faceCascade;
     private final CascadeClassifier eyesCascade;
-    public EyesTrackingService(CascadeClassifier faceCascade, CascadeClassifier eyesCascade) {
+    public PupilsDetectionService(CascadeClassifier faceCascade, CascadeClassifier eyesCascade) {
         this.faceCascade = faceCascade;
         this.eyesCascade = eyesCascade;
     }
