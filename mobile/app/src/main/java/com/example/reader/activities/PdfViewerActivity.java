@@ -1,8 +1,10 @@
 package com.example.reader.activities;
 
 import static com.example.reader.CommunicationConstants.EYE_CENTER_ORDINATE_PARAMETER_NAME;
+import static com.example.reader.CommunicationConstants.PUPIL_DETECTION_INTENT_NAME;
 import static com.example.reader.CommunicationConstants.PUPIL_MOVEMENT_INTENT_NAME;
 import static com.example.reader.CommunicationConstants.PUPIL_ORDINATE_PARAMETER_NAME;
+import static com.example.reader.CommunicationConstants.PUPIL_PRESENCE_PARAMETER_NAME;
 
 import android.content.BroadcastReceiver;
 import android.content.Context;
@@ -10,8 +12,10 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
+import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.appcompat.app.AppCompatActivity;
@@ -25,7 +29,6 @@ import java.io.File;
 
 public class PdfViewerActivity extends AppCompatActivity {
     private PDFView pdfView;
-    private float eyesLine = 0;
     private float previousPupilY = 0;
 
     private final BroadcastReceiver pupilMovementReceiver = new BroadcastReceiver() {
@@ -38,6 +41,27 @@ public class PdfViewerActivity extends AppCompatActivity {
             scrollPdf(pupilY, eyeLineY);
         }
     };
+
+    private final BroadcastReceiver pupilPresenceReceiver = new BroadcastReceiver() {
+        @Override
+        public void onReceive(Context context, Intent intent) {
+            boolean isPupilPresent = intent.getBooleanExtra(PUPIL_PRESENCE_PARAMETER_NAME, false);
+
+            this.displayEyeIconOnDetectedPupil(isPupilPresent);
+        }
+
+        private void displayEyeIconOnDetectedPupil(boolean isPupilPresent) {
+            ImageView eyeIcon = findViewById(R.id.eyeIcon);
+            runOnUiThread(() -> {
+                if (isPupilPresent) {
+                    eyeIcon.setVisibility(View.VISIBLE);
+                } else {
+                    eyeIcon.setVisibility(View.GONE);
+                }
+            });
+        }
+    };
+
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -55,6 +79,7 @@ public class PdfViewerActivity extends AppCompatActivity {
         }
 
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(PUPIL_MOVEMENT_INTENT_NAME));
+        LocalBroadcastManager.getInstance(this).registerReceiver(pupilPresenceReceiver, new IntentFilter(PUPIL_DETECTION_INTENT_NAME));
         Intent serviceIntent = new Intent(this, CameraForegroundService.class);
         startForegroundService(serviceIntent);
     }
@@ -63,25 +88,26 @@ public class PdfViewerActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(PUPIL_MOVEMENT_INTENT_NAME));
+        LocalBroadcastManager.getInstance(this).registerReceiver(pupilPresenceReceiver, new IntentFilter(PUPIL_DETECTION_INTENT_NAME));
     }
 
     @Override
     protected void onPause() {
         super.onPause();
         unregisterReceiver(pupilMovementReceiver);
-        this.eyesLine = 0;
+        unregisterReceiver(pupilPresenceReceiver);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
         unregisterReceiver(pupilMovementReceiver);
-        this.eyesLine = 0;
+        unregisterReceiver(pupilPresenceReceiver);
     }
 
     private void scrollPdf(float pupilY, float eyeLineY) {
         float pupilYToUse = pupilY == 0 ? this.previousPupilY : pupilY;
-        float deltaByEyeLine = -(eyeLineY - pupilYToUse);
+        float deltaByEyeLine = eyeLineY - pupilYToUse;
         this.previousPupilY = pupilYToUse;
 
         Toast.makeText(this, "DELTA" + " " + deltaByEyeLine, Toast.LENGTH_SHORT).show();
@@ -92,13 +118,13 @@ public class PdfViewerActivity extends AppCompatActivity {
 
         float lowerBound = screenHeight / (float) -564.7;
         // -3.4
-        if (deltaByEyeLine <= 0 && deltaByEyeLine >= lowerBound) {
+        if (deltaByEyeLine <= 0 && deltaByEyeLine >= -3.4) {
             return;
         }
 
         float upperBound = screenHeight / 768;
         // 2.5
-        if (deltaByEyeLine >= 0 && deltaByEyeLine <= upperBound) {
+        if (deltaByEyeLine >= 0 && deltaByEyeLine <= 2.5) {
             return;
         }
 

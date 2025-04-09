@@ -87,6 +87,11 @@ public class FrameProcessingService {
         inputFrame.rgba().copyTo(frame);
 
         Rect[] faces = this.pupilsDetectionService.detectFaces(frame);
+
+        if (faces.length == 0) {
+            this.communicationService.sendPupilPresenceData(false);
+        }
+
         for (Rect face : faces) {
             Imgproc.rectangle(frame, face.tl(), face.br(), new Scalar(255, 0, 0), 2);
 
@@ -103,6 +108,7 @@ public class FrameProcessingService {
                 Mat eyeWithoutBrows = this.cutEyebrows(eyeFrame);
                 MatOfKeyPoint pupils = this.pupilsDetectionService.detectPupils(eyeWithoutBrows, eye);
                 this.communicationService.sendPupilData(pupils, eye, face);
+                this.communicationService.sendPupilPresenceData(pupils.toArray().length > 0);
 
                 for (KeyPoint pupil : pupils.toArray()) {
                     Point pupilCenter = new Point(pupil.pt.x, pupil.pt.y);
