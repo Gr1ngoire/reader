@@ -49,7 +49,7 @@
         </activity>
 
         <service
-            android:name=".services.EyesTrackingService"
+            android:name=".services.CameraForegroundService"
             android:foregroundServiceType="camera"
             android:exported="false"
             android:permission="android.permission.FOREGROUND_SERVICE" />
