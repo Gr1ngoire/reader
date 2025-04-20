@@ -5,6 +5,7 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
@@ -23,12 +24,16 @@ import com.google.android.material.button.MaterialButton;
 
 import org.opencv.android.OpenCVLoader;
 
-import java.util.ArrayList;
+import java.io.File;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_CODE = 100;
-    private boolean isMyShelfSelected = false;
+    private boolean areMyBooksSelected = false;
+
+    private BooksService booksService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -51,21 +56,19 @@ public class MainActivity extends AppCompatActivity {
             // Start the pupil detection service in the background
         }
 
+        this.booksService = new BooksService(this);
+
         setContentView(R.layout.activity_main);
         this.initMyMyBooksFiltersButton();
-
-        BooksService booksService = new BooksService(this);
-
-        new Thread(() -> {
-            List<Book> books = booksService.getAllBooks();
-            runOnUiThread(() -> {
-                this.initAllBooksLayout(books);
-            });
-        }).start();
+        this.displayAllBooks();
     }
 
     private void initAllBooksLayout(List<Book> books) {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
+
+        while (recyclerView.getItemDecorationCount() > 0) {
+            recyclerView.removeItemDecorationAt(0);
+        }
 
         // Get screen dimensions
         DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
@@ -116,18 +119,67 @@ public class MainActivity extends AppCompatActivity {
         this.updateBooksFilterButtonsColours(allBooksButton, myBooksButton);
 
         allBooksButton.setOnClickListener(event -> {
-            this.isMyShelfSelected = false;
+            this.areMyBooksSelected = false;
             this.updateBooksFilterButtonsColours(allBooksButton, myBooksButton);
+            this.displayAllBooks();
         });
         myBooksButton.setOnClickListener(event -> {
-            this.isMyShelfSelected = true;
+            this.areMyBooksSelected = true;
             this.updateBooksFilterButtonsColours(allBooksButton, myBooksButton);
+            this.displayMyBooks();
         });
     }
 
+    private void displayAllBooks() {
+        new Thread(() -> {
+            List<Book> books = this.booksService.getAllBooks();
+            runOnUiThread(() -> {
+                this.initAllBooksLayout(books);
+            });
+        }).start();
+    }
+
+    private void displayMyBooks() {
+        File downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (downloadsDir == null) {
+            throw new IllegalArgumentException("Downloads dir is absent");
+        }
+
+        File[] downloadedBooksFiles = downloadsDir.listFiles();
+        if (downloadedBooksFiles == null) {
+            throw new IllegalArgumentException("Downloaded books are absent");
+        }
+
+        for (File file: downloadedBooksFiles) {
+            Log.d("DOWNLOADED BOOK", file.getName());
+        }
+
+        new Thread(() -> {
+            List<Book> books = Arrays.stream(downloadedBooksFiles).map(file -> this.booksService.getBookFromFileName(file.getName())).collect(Collectors.toList());
+            runOnUiThread(() -> {
+                this.initAllBooksLayout(books);
+            });
+        }).start();
+    }
+
+    private void clearPrivateDownloads() {
+        File downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (downloadsDir != null && downloadsDir.isDirectory()) {
+            File[] files = downloadsDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile()) {
+                        boolean deleted = file.delete();
+                        Log.d("ClearDownloads", "Deleted " + file.getName() + ": " + deleted);
+                    }
+                }
+            }
+        }
+    }
+
     private void updateBooksFilterButtonsColours(MaterialButton allBooksButton, MaterialButton myBooksButton) {
-        int allBooksButtonColour = getColor(this.isMyShelfSelected ? R.color.inactive : R.color.active);
-        int myBooksButtonColour = getColor(this.isMyShelfSelected ? R.color.active : R.color.inactive);
+        int allBooksButtonColour = getColor(this.areMyBooksSelected ? R.color.inactive : R.color.active);
+        int myBooksButtonColour = getColor(this.areMyBooksSelected ? R.color.active : R.color.inactive);
         allBooksButton.setBackgroundTintList(ColorStateList.valueOf(allBooksButtonColour));
         allBooksButton.setTextColor(ColorStateList.valueOf(myBooksButtonColour));
         myBooksButton.setBackgroundTintList(ColorStateList.valueOf(myBooksButtonColour));

@@ -97,7 +97,7 @@ public class BooksService {
     /** Books file names are represented in format <name>__<author>.
      * If book name or author include 2+ words they are separated with _
      **/
-    private Book getBookFromFileName(String rawFileName) {
+    public Book getBookFromFileName(String rawFileName) {
         String NAME_AUTHOR_SEPARATOR = "__";
         char RAW_NAME_FRAGMENT_SEPARATOR = '_';
         char NEW_NAME_FRAGMENT_SEPARATOR = ' ';
