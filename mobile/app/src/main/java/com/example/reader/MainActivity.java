@@ -18,6 +18,7 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.reader.entities.Book;
+import com.example.reader.services.BooksService;
 import com.google.android.material.button.MaterialButton;
 
 import org.opencv.android.OpenCVLoader;
@@ -51,15 +52,16 @@ public class MainActivity extends AppCompatActivity {
         }
 
         setContentView(R.layout.activity_main);
-
         this.initMyMyBooksFiltersButton();
 
-        List<Book> mockedBooks = new ArrayList<>();
-        mockedBooks.add(new Book("Atlas shrugged", "Ayn Rand", "atlas_shrugged.pdf"));
-        mockedBooks.add(new Book("The call of Cthulhu", "Howard Lovecraft", "the_call_of_cthulhu.pdf"));
-        mockedBooks.add(new Book("Meditations", "Marcus Aurelius", "meditations.pdf"));
-        mockedBooks.add(new Book("Harry Potter and the Philosopher's Stone", "J.K. Rowling", "harry_potter_and_the_philosophers_stone.pdf"));
-        this.initAllBooksLayout(mockedBooks);
+        BooksService booksService = new BooksService(this);
+
+        new Thread(() -> {
+            List<Book> books = booksService.getAllBooks();
+            runOnUiThread(() -> {
+                this.initAllBooksLayout(books);
+            });
+        }).start();
     }
 
     private void initAllBooksLayout(List<Book> books) {

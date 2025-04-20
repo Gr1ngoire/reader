@@ -62,7 +62,7 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
         holder.itemView.setOnClickListener(event -> {
             new Thread(() -> {
                 try {
-                    String downloadedBookFilePath = booksService.getBookContentFromS3(book.getBookFileName());
+                    String downloadedBookFilePath = booksService.getBookContent(book.getBookFileName());
                     Intent book_content_intent = new Intent(context, PdfViewerActivity.class);
                     book_content_intent.putExtra("filePath", downloadedBookFilePath);
                     context.startActivity(book_content_intent);
