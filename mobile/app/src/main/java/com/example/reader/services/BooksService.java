@@ -22,7 +22,9 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class BooksService {
     private static final String TAG = "MainActivity";
@@ -113,5 +115,39 @@ public class BooksService {
         String author = rawAuthor.replace(RAW_NAME_FRAGMENT_SEPARATOR, NEW_NAME_FRAGMENT_SEPARATOR);
 
         return new Book(name, author, rawFileName);
+    }
+
+    public List<Book> getDownloadedBooks() {
+        File downloadsDir = this.context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (downloadsDir == null) {
+            throw new IllegalArgumentException("Downloads dir is absent");
+        }
+
+        File[] downloadedBooksFiles = downloadsDir.listFiles();
+        if (downloadedBooksFiles == null) {
+            throw new IllegalArgumentException("Downloaded books are absent");
+        }
+
+        for (File file: downloadedBooksFiles) {
+            Log.d("DOWNLOADED BOOK", file.getName());
+        }
+
+        return Arrays.stream(downloadedBooksFiles).map(file -> this.getBookFromFileName(file.getName())).collect(Collectors.toList());
+    }
+
+    public void deleteBookFromLocalStorage(String bookFileName) {
+        File downloadsDir = this.context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (downloadsDir == null) {
+            Log.e("DeleteBook", "Downloads directory is not accessible.");
+            return;
+        }
+
+        File bookFile = new File(downloadsDir, bookFileName);
+        if (bookFile.exists()) {
+            boolean deleted = bookFile.delete();
+            Log.d("DeleteBook", "Deleted " + bookFileName + ": " + deleted);
+        } else {
+            Log.w("DeleteBook", "Book file not found: " + bookFileName);
+        }
     }
 }

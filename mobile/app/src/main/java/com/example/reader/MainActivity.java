@@ -25,14 +25,11 @@ import com.google.android.material.button.MaterialButton;
 import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
 public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_CODE = 100;
     private boolean areMyBooksSelected = false;
-
     private BooksService booksService;
 
     @Override
@@ -133,32 +130,14 @@ public class MainActivity extends AppCompatActivity {
     private void displayAllBooks() {
         new Thread(() -> {
             List<Book> books = this.booksService.getAllBooks();
-            runOnUiThread(() -> {
-                this.initAllBooksLayout(books);
-            });
+            runOnUiThread(() -> this.initAllBooksLayout(books));
         }).start();
     }
 
     private void displayMyBooks() {
-        File downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
-        if (downloadsDir == null) {
-            throw new IllegalArgumentException("Downloads dir is absent");
-        }
-
-        File[] downloadedBooksFiles = downloadsDir.listFiles();
-        if (downloadedBooksFiles == null) {
-            throw new IllegalArgumentException("Downloaded books are absent");
-        }
-
-        for (File file: downloadedBooksFiles) {
-            Log.d("DOWNLOADED BOOK", file.getName());
-        }
-
         new Thread(() -> {
-            List<Book> books = Arrays.stream(downloadedBooksFiles).map(file -> this.booksService.getBookFromFileName(file.getName())).collect(Collectors.toList());
-            runOnUiThread(() -> {
-                this.initAllBooksLayout(books);
-            });
+            List<Book> books = this.booksService.getDownloadedBooks();
+            runOnUiThread(() -> this.initAllBooksLayout(books));
         }).start();
     }
 

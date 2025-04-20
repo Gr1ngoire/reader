@@ -7,6 +7,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageButton;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -28,13 +29,6 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
 
     public BookAdapter(List<Book> books) {
         this.books = books;
-    }
-
-    // Method to set dynamic dimensions
-    public void setRectangleDimensions(int width, int height) {
-        this.rectangleWidth = width;
-        this.rectangleHeight = height;
-        notifyDataSetChanged();
     }
 
     @NonNull
@@ -59,21 +53,32 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
         holder.name.setText(book.getName());
         holder.author.setText(book.getAuthor());
 
-        holder.itemView.setOnClickListener(event -> {
-            new Thread(() -> {
-                try {
-                    String downloadedBookFilePath = booksService.getBookContent(book.getBookFileName());
-                    Intent book_content_intent = new Intent(context, PdfViewerActivity.class);
-                    book_content_intent.putExtra("filePath", downloadedBookFilePath);
-                    context.startActivity(book_content_intent);
-                    Log.i("Successfully loaded book", downloadedBookFilePath);
-                } catch (ActivityNotFoundException e) {
-                    Toast.makeText(context, "No PDF viewer found!", Toast.LENGTH_SHORT).show();
-                } catch (IOException e) {
-                    throw new RuntimeException(e);
-                }
-            }).start();
-        });
+        List<Book> downloadedBooks = this.booksService.getDownloadedBooks();
+        boolean isBookDownloaded = downloadedBooks.stream().anyMatch(bookItem -> book.getFileName().equals(bookItem.getFileName()));
+        if (isBookDownloaded) {
+            holder.deleteButton.setVisibility(View.VISIBLE);
+            holder.deleteButton.setOnClickListener(v -> {
+                this.booksService.deleteBookFromLocalStorage(book.getFileName());
+                holder.deleteButton.setVisibility(View.GONE);
+            });
+        } else {
+            holder.deleteButton.setVisibility(View.GONE);
+        }
+
+        holder.itemView.setOnClickListener(event -> new Thread(() -> {
+            try {
+                String downloadedBookFilePath = booksService.getBookContent(book.getFileName());
+                Intent book_content_intent = new Intent(context, PdfViewerActivity.class);
+                book_content_intent.putExtra("filePath", downloadedBookFilePath);
+                context.startActivity(book_content_intent);
+
+                Log.i("Successfully loaded book", downloadedBookFilePath);
+            } catch (ActivityNotFoundException e) {
+                Toast.makeText(context, "No PDF viewer found!", Toast.LENGTH_SHORT).show();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }).start());
     }
 
     @Override
@@ -81,13 +86,22 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
         return books.size();
     }
 
+    // Method to set dynamic dimensions
+    public void setRectangleDimensions(int width, int height) {
+        this.rectangleWidth = width;
+        this.rectangleHeight = height;
+        notifyDataSetChanged();
+    }
+
     public static class BookViewHolder extends RecyclerView.ViewHolder {
         TextView name, author;
+        ImageButton deleteButton;
 
         public BookViewHolder(@NonNull View itemView) {
             super(itemView);
             name = itemView.findViewById(R.id.book_name);
             author = itemView.findViewById(R.id.book_author);
+            deleteButton = itemView.findViewById(R.id.deleteButton);
         }
     }
 }
