@@ -15,6 +15,7 @@ import android.os.Bundle;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -78,6 +79,9 @@ public class PdfViewerActivity extends AppCompatActivity {
             Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
         }
 
+        ImageButton backButton = findViewById(R.id.back_button);
+        backButton.setOnClickListener(v -> finish());
+
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(PUPIL_MOVEMENT_INTENT_NAME));
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilPresenceReceiver, new IntentFilter(PUPIL_DETECTION_INTENT_NAME));
         Intent serviceIntent = new Intent(this, CameraForegroundService.class);
@@ -94,15 +98,15 @@ public class PdfViewerActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(pupilMovementReceiver);
-        unregisterReceiver(pupilPresenceReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilMovementReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilPresenceReceiver);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(pupilMovementReceiver);
-        unregisterReceiver(pupilPresenceReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilMovementReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilPresenceReceiver);
     }
 
     private void scrollPdf(float pupilY, float eyeLineY) {
