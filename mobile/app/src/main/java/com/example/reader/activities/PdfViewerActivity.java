@@ -24,13 +24,15 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.reader.R;
 import com.example.reader.services.CameraForegroundService;
+import com.example.reader.services.ReadProgressService;
 import com.github.barteksc.pdfviewer.PDFView;
 
 import java.io.File;
 
 public class PdfViewerActivity extends AppCompatActivity {
-    private PDFView pdfView;
     private float previousPupilY = 0;
+    private PDFView pdfView;
+    private ReadProgressService readProgressService;
 
     private final BroadcastReceiver pupilMovementReceiver = new BroadcastReceiver() {
         @Override
@@ -73,14 +75,21 @@ public class PdfViewerActivity extends AppCompatActivity {
         String filePath = intent.getStringExtra("filePath");
         File file = new File(filePath);
 
+        this.readProgressService = new ReadProgressService(this);
+        int lastPage = this.readProgressService.getLastReadPage(filePath);
+
         try {
-            pdfView.fromFile(file).enableSwipe(true).enableDoubletap(true).load();
+            pdfView.fromFile(file).defaultPage(lastPage).enableSwipe(true).enableDoubletap(true).load();
         } catch (Exception e) {
             Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
         }
 
         ImageButton backButton = findViewById(R.id.back_button);
-        backButton.setOnClickListener(v -> finish());
+        backButton.setOnClickListener(v -> {
+            int currentPage = pdfView.getCurrentPage();
+            this.readProgressService.saveLastReadPage(filePath, currentPage);
+            finish();
+        });
 
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(PUPIL_MOVEMENT_INTENT_NAME));
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilPresenceReceiver, new IntentFilter(PUPIL_DETECTION_INTENT_NAME));

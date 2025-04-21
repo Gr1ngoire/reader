@@ -31,18 +31,16 @@ public class BooksService {
     private final String PDF_EXTENSION_PORTION = ".pdf";
     private final Context context;
     private final AmazonS3 s3Client;
+    private final ReadProgressService readProgressService;
 
     public BooksService(Context context) {
         this.context = context;
+        this.readProgressService = new ReadProgressService(context);
 
         // Load AWS credentials from local.properties
         String accessKey = BuildConfig.AWS_ACCESS_KEY;
         String secretKey = BuildConfig.AWS_SECRET_KEY;
         String region = BuildConfig.AWS_REGION;
-
-//        if (accessKey.equals("") || secretKey.equals("") || region.equals("") || bucketName.equals("")) {
-//            throw new IOException("Missing AWS credentials in .env file.");
-//        }
 
         // Initialize S3 client
         AWSCredentials awsCreds = new BasicAWSCredentials(accessKey, secretKey);
@@ -145,6 +143,7 @@ public class BooksService {
         File bookFile = new File(downloadsDir, bookFileName);
         if (bookFile.exists()) {
             boolean deleted = bookFile.delete();
+            this.readProgressService.removeReadProgressInfo(bookFile.getPath());
             Log.d("DeleteBook", "Deleted " + bookFileName + ": " + deleted);
         } else {
             Log.w("DeleteBook", "Book file not found: " + bookFileName);
