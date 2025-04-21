@@ -15,7 +15,7 @@ public class Book {
     public String getName() {
         return name;
     }
-    public String getBookFileName () {
+    public String getFileName() {
         return bookFileName;
     }
 }

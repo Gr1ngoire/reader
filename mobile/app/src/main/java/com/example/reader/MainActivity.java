@@ -5,6 +5,7 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.os.Environment;
 import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.View;
@@ -18,16 +19,18 @@ import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.example.reader.entities.Book;
+import com.example.reader.services.BooksService;
 import com.google.android.material.button.MaterialButton;
 
 import org.opencv.android.OpenCVLoader;
 
-import java.util.ArrayList;
+import java.io.File;
 import java.util.List;
 
 public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_CODE = 100;
-    private boolean isMyShelfSelected = false;
+    private boolean areMyBooksSelected = false;
+    private BooksService booksService;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -50,20 +53,19 @@ public class MainActivity extends AppCompatActivity {
             // Start the pupil detection service in the background
         }
 
+        this.booksService = new BooksService(this);
+
         setContentView(R.layout.activity_main);
-
         this.initMyMyBooksFiltersButton();
-
-        List<Book> mockedBooks = new ArrayList<>();
-        mockedBooks.add(new Book("Atlas shrugged", "Ayn Rand", "atlas_shrugged.pdf"));
-        mockedBooks.add(new Book("The call of Cthulhu", "Howard Lovecraft", "the_call_of_cthulhu.pdf"));
-        mockedBooks.add(new Book("Meditations", "Marcus Aurelius", "meditations.pdf"));
-        mockedBooks.add(new Book("Harry Potter and the Philosopher's Stone", "J.K. Rowling", "harry_potter_and_the_philosophers_stone.pdf"));
-        this.initAllBooksLayout(mockedBooks);
+        this.displayAllBooks();
     }
 
     private void initAllBooksLayout(List<Book> books) {
         RecyclerView recyclerView = findViewById(R.id.recyclerView);
+
+        while (recyclerView.getItemDecorationCount() > 0) {
+            recyclerView.removeItemDecorationAt(0);
+        }
 
         // Get screen dimensions
         DisplayMetrics displayMetrics = getResources().getDisplayMetrics();
@@ -114,18 +116,49 @@ public class MainActivity extends AppCompatActivity {
         this.updateBooksFilterButtonsColours(allBooksButton, myBooksButton);
 
         allBooksButton.setOnClickListener(event -> {
-            this.isMyShelfSelected = false;
+            this.areMyBooksSelected = false;
             this.updateBooksFilterButtonsColours(allBooksButton, myBooksButton);
+            this.displayAllBooks();
         });
         myBooksButton.setOnClickListener(event -> {
-            this.isMyShelfSelected = true;
+            this.areMyBooksSelected = true;
             this.updateBooksFilterButtonsColours(allBooksButton, myBooksButton);
+            this.displayMyBooks();
         });
     }
 
+    private void displayAllBooks() {
+        new Thread(() -> {
+            List<Book> books = this.booksService.getAllBooks();
+            runOnUiThread(() -> this.initAllBooksLayout(books));
+        }).start();
+    }
+
+    private void displayMyBooks() {
+        new Thread(() -> {
+            List<Book> books = this.booksService.getDownloadedBooks();
+            runOnUiThread(() -> this.initAllBooksLayout(books));
+        }).start();
+    }
+
+    private void clearPrivateDownloads() {
+        File downloadsDir = getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        if (downloadsDir != null && downloadsDir.isDirectory()) {
+            File[] files = downloadsDir.listFiles();
+            if (files != null) {
+                for (File file : files) {
+                    if (file.isFile()) {
+                        boolean deleted = file.delete();
+                        Log.d("ClearDownloads", "Deleted " + file.getName() + ": " + deleted);
+                    }
+                }
+            }
+        }
+    }
+
     private void updateBooksFilterButtonsColours(MaterialButton allBooksButton, MaterialButton myBooksButton) {
-        int allBooksButtonColour = getColor(this.isMyShelfSelected ? R.color.inactive : R.color.active);
-        int myBooksButtonColour = getColor(this.isMyShelfSelected ? R.color.active : R.color.inactive);
+        int allBooksButtonColour = getColor(this.areMyBooksSelected ? R.color.inactive : R.color.active);
+        int myBooksButtonColour = getColor(this.areMyBooksSelected ? R.color.active : R.color.inactive);
         allBooksButton.setBackgroundTintList(ColorStateList.valueOf(allBooksButtonColour));
         allBooksButton.setTextColor(ColorStateList.valueOf(myBooksButtonColour));
         myBooksButton.setBackgroundTintList(ColorStateList.valueOf(myBooksButtonColour));

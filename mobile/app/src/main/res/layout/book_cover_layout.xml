@@ -29,9 +29,19 @@
             android:gravity="top|center_horizontal"
             android:maxLines="2"
             android:paddingTop="10dp"
-            android:text="Atlas shrugged"
+            android:text=""
             android:textColor="#D99F6C"
             android:textSize="24sp" />
+
+        <ImageButton
+            android:id="@+id/deleteButton"
+            android:layout_width="match_parent"
+            android:layout_height="130dp"
+            android:gravity="bottom|center_horizontal"
+            android:background="#59341E"
+            android:src="@android:drawable/ic_menu_delete"
+            android:contentDescription="Delete book"
+            android:visibility="gone" />
 
         <TextView
             android:id="@+id/book_author"
@@ -42,7 +52,7 @@
             android:gravity="bottom|center_horizontal"
             android:maxLines="1"
             android:paddingBottom="20dp"
-            android:text="Ayn Rend"
+            android:text=""
             android:textColor="#D99F6C"
             android:textSize="18sp" />
 
