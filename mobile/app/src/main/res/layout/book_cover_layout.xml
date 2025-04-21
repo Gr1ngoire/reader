@@ -33,15 +33,36 @@
             android:textColor="#D99F6C"
             android:textSize="24sp" />
 
-        <ImageButton
-            android:id="@+id/deleteButton"
+        <LinearLayout
             android:layout_width="match_parent"
-            android:layout_height="130dp"
-            android:gravity="bottom|center_horizontal"
+            android:layout_height="30dp"
+            android:orientation="horizontal"
+            android:gravity="center_vertical|center_horizontal"
             android:background="#59341E"
-            android:src="@android:drawable/ic_menu_delete"
-            android:contentDescription="Delete book"
-            android:visibility="gone" />
+            >
+
+            <TextView
+                android:id="@+id/read_progress"
+                android:layout_width="wrap_content"
+                android:layout_height="30dp"
+                android:background="#59341E"
+                android:ellipsize="end"
+                android:maxLines="2"
+                android:paddingTop="0dp"
+                android:text="99%"
+                android:textColor="#D99F6C"
+                android:textSize="20sp" />
+
+            <ImageButton
+                android:id="@+id/deleteButton"
+                android:layout_width="30dp"
+                android:layout_height="30dp"
+                android:background="#59341E"
+                android:src="@android:drawable/ic_menu_delete"
+                android:contentDescription="Delete book"
+                android:visibility="gone" />
+
+        </LinearLayout>
 
         <TextView
             android:id="@+id/book_author"

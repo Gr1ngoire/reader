@@ -112,7 +112,7 @@ public class BooksService {
         String name = rawName.replace(RAW_NAME_FRAGMENT_SEPARATOR, NEW_NAME_FRAGMENT_SEPARATOR);
         String author = rawAuthor.replace(RAW_NAME_FRAGMENT_SEPARATOR, NEW_NAME_FRAGMENT_SEPARATOR);
 
-        return new Book(name, author, rawFileName);
+        return new Book(name, author, rawFileName, 0);
     }
 
     public List<Book> getDownloadedBooks() {
@@ -144,6 +144,7 @@ public class BooksService {
         if (bookFile.exists()) {
             boolean deleted = bookFile.delete();
             this.readProgressService.removeReadProgressInfo(bookFile.getPath());
+            this.readProgressService.removeAllPagesCount(bookFile.getPath());
             Log.d("DeleteBook", "Deleted " + bookFileName + ": " + deleted);
         } else {
             Log.w("DeleteBook", "Book file not found: " + bookFileName);

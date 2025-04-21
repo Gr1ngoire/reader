@@ -12,6 +12,7 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
@@ -79,17 +80,19 @@ public class PdfViewerActivity extends AppCompatActivity {
         int lastPage = this.readProgressService.getLastReadPage(filePath);
 
         try {
-            pdfView.fromFile(file).defaultPage(lastPage).enableSwipe(true).enableDoubletap(true).load();
+            pdfView.fromFile(file).defaultPage(lastPage).enableSwipe(true).enableDoubletap(true).onLoad(allPages -> {
+                Log.d("ALL PAGESSSSSSSSSSS", String.valueOf(allPages));
+                this.readProgressService.saveAllPagesCount(filePath, allPages);
+                ImageButton backButton = findViewById(R.id.back_button);
+                backButton.setOnClickListener(v -> {
+                    int currentPage = pdfView.getCurrentPage();
+                    this.readProgressService.saveLastReadPage(filePath, currentPage);
+                    finish();
+                });
+            }).load();
         } catch (Exception e) {
             Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
         }
-
-        ImageButton backButton = findViewById(R.id.back_button);
-        backButton.setOnClickListener(v -> {
-            int currentPage = pdfView.getCurrentPage();
-            this.readProgressService.saveLastReadPage(filePath, currentPage);
-            finish();
-        });
 
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(PUPIL_MOVEMENT_INTENT_NAME));
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilPresenceReceiver, new IntentFilter(PUPIL_DETECTION_INTENT_NAME));
