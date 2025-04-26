@@ -112,7 +112,7 @@ public class BooksService {
         String name = rawName.replace(RAW_NAME_FRAGMENT_SEPARATOR, NEW_NAME_FRAGMENT_SEPARATOR);
         String author = rawAuthor.replace(RAW_NAME_FRAGMENT_SEPARATOR, NEW_NAME_FRAGMENT_SEPARATOR);
 
-        return new Book(name, author, rawFileName, 0);
+        return new Book(name, author, rawFileName);
     }
 
     public List<Book> getDownloadedBooks() {

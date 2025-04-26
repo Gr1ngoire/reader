@@ -62,6 +62,9 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
             holder.deleteButton.setVisibility(View.VISIBLE);
             holder.deleteButton.setOnClickListener(v -> {
                 booksService.deleteBookFromLocalStorage(book.getFileName());
+                books.remove(position);
+                notifyItemRemoved(position);
+                notifyItemRangeChanged(position, books.size());
                 holder.deleteButton.setVisibility(View.GONE);
             });
         } else {

@@ -26,6 +26,7 @@ import org.opencv.android.OpenCVLoader;
 
 import java.io.File;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class MainActivity extends AppCompatActivity {
     private static final int CAMERA_PERMISSION_CODE = 100;
@@ -56,7 +57,7 @@ public class MainActivity extends AppCompatActivity {
         this.booksService = new BooksService(this);
 
         setContentView(R.layout.activity_main);
-        this.initMyMyBooksFiltersButton();
+        this.initMyBooksFiltersButton();
         this.displayAllBooks();
     }
 
@@ -110,7 +111,7 @@ public class MainActivity extends AppCompatActivity {
         recyclerView.setAdapter(adapter);
     }
 
-    private void initMyMyBooksFiltersButton() {
+    private void initMyBooksFiltersButton() {
         MaterialButton allBooksButton = findViewById(R.id.all_books_button);
         MaterialButton myBooksButton = findViewById(R.id.my_books_button);
         this.updateBooksFilterButtonsColours(allBooksButton, myBooksButton);
@@ -129,8 +130,10 @@ public class MainActivity extends AppCompatActivity {
 
     private void displayAllBooks() {
         new Thread(() -> {
-            List<Book> books = this.booksService.getAllBooks();
-            runOnUiThread(() -> this.initAllBooksLayout(books));
+            List<Book> allBooks = this.booksService.getAllBooks();
+            List<Book> downloadedBooks = this.booksService.getDownloadedBooks();
+            List<Book> booksToDisplay = allBooks.stream().filter(book -> !downloadedBooks.contains(book)).collect(Collectors.toList());
+            runOnUiThread(() -> this.initAllBooksLayout(booksToDisplay));
         }).start();
     }
 
@@ -163,6 +166,18 @@ public class MainActivity extends AppCompatActivity {
         allBooksButton.setTextColor(ColorStateList.valueOf(myBooksButtonColour));
         myBooksButton.setBackgroundTintList(ColorStateList.valueOf(myBooksButtonColour));
         myBooksButton.setTextColor(ColorStateList.valueOf(allBooksButtonColour));
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (areMyBooksSelected) {
+            this.displayMyBooks();
+        } else {
+            this.displayAllBooks();
+        }
+
     }
 
 }

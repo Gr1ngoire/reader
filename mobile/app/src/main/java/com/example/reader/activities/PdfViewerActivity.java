@@ -81,7 +81,6 @@ public class PdfViewerActivity extends AppCompatActivity {
 
         try {
             pdfView.fromFile(file).defaultPage(lastPage).enableSwipe(true).enableDoubletap(true).onLoad(allPages -> {
-                Log.d("ALL PAGESSSSSSSSSSS", String.valueOf(allPages));
                 this.readProgressService.saveAllPagesCount(filePath, allPages);
                 ImageButton backButton = findViewById(R.id.back_button);
                 backButton.setOnClickListener(v -> {

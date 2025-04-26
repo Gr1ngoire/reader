@@ -1,15 +1,15 @@
 package com.example.reader.entities;
 
+import java.util.Objects;
+
 public class Book {
     private final String name;
     private final String author;
     private final String bookFileName;
-    private final int readingProgress;
-    public Book(String name, String author, String bookFileName, int readingProgress) {
+    public Book(String name, String author, String bookFileName) {
         this.name = name;
         this.author = author;
         this.bookFileName = bookFileName;
-        this.readingProgress = readingProgress;
     }
     public String getAuthor() {
         return author;
@@ -20,7 +20,19 @@ public class Book {
     public String getFileName() {
         return bookFileName;
     }
-    public int getReadingProgress() {
-        return this.readingProgress;
+
+    @Override
+    public int hashCode() {
+        return bookFileName != null ? bookFileName.hashCode() : 0;
+    }
+
+    @Override
+    public boolean equals(Object object) {
+        if (this == object) return true;
+        if (object == null || getClass() != object.getClass()) return false;
+
+        Book book = (Book) object;
+
+        return Objects.equals(bookFileName, book.bookFileName);
     }
 }
