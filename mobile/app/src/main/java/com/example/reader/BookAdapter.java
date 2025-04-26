@@ -3,6 +3,7 @@ package com.example.reader;
 import android.content.ActivityNotFoundException;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Environment;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -17,7 +18,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import com.example.reader.activities.PdfViewerActivity;
 import com.example.reader.entities.Book;
 import com.example.reader.services.BooksService;
+import com.example.reader.services.ReadProgressService;
 
+import java.io.File;
 import java.io.IOException;
 import java.util.List;
 
@@ -25,7 +28,6 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
     private final List<Book> books;
     private int rectangleWidth;
     private int rectangleHeight;
-    private BooksService booksService;
 
     public BookAdapter(List<Book> books) {
         this.books = books;
@@ -48,21 +50,35 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
     @Override
     public void onBindViewHolder(@NonNull BookViewHolder holder, int position) {
         Context context = holder.itemView.getContext();
-        booksService = new BooksService(context);
+        BooksService booksService = new BooksService(context);
+        ReadProgressService readProgressService = new ReadProgressService(context);
         Book book = books.get(position);
         holder.name.setText(book.getName());
         holder.author.setText(book.getAuthor());
 
-        List<Book> downloadedBooks = this.booksService.getDownloadedBooks();
+        List<Book> downloadedBooks = booksService.getDownloadedBooks();
         boolean isBookDownloaded = downloadedBooks.stream().anyMatch(bookItem -> book.getFileName().equals(bookItem.getFileName()));
         if (isBookDownloaded) {
             holder.deleteButton.setVisibility(View.VISIBLE);
             holder.deleteButton.setOnClickListener(v -> {
-                this.booksService.deleteBookFromLocalStorage(book.getFileName());
+                booksService.deleteBookFromLocalStorage(book.getFileName());
+                books.remove(position);
+                notifyItemRemoved(position);
+                notifyItemRangeChanged(position, books.size());
                 holder.deleteButton.setVisibility(View.GONE);
             });
         } else {
             holder.deleteButton.setVisibility(View.GONE);
+        }
+
+        File downloadsDir = context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS);
+        File bookFile = new File(downloadsDir, book.getFileName());
+        int bookAllPagesCount = readProgressService.getAllPagesCount(bookFile.getPath());
+        int lastReadPageIndex = readProgressService.getLastReadPage(bookFile.getPath());
+        int readProgress = lastReadPageIndex == 0 || bookAllPagesCount == 0 ? 0 : (int) ((lastReadPageIndex / (float) bookAllPagesCount) * 100);
+        TextView readProgressLabel = holder.itemView.findViewById(R.id.read_progress);
+        if (isBookDownloaded) {
+            readProgressLabel.setText(String.format("%d%% read", readProgress));
         }
 
         holder.itemView.setOnClickListener(event -> new Thread(() -> {

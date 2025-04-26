@@ -12,9 +12,11 @@ import android.content.Intent;
 import android.content.IntentFilter;
 import android.graphics.Rect;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.view.WindowMetrics;
+import android.widget.ImageButton;
 import android.widget.ImageView;
 import android.widget.Toast;
 
@@ -23,13 +25,15 @@ import androidx.localbroadcastmanager.content.LocalBroadcastManager;
 
 import com.example.reader.R;
 import com.example.reader.services.CameraForegroundService;
+import com.example.reader.services.ReadProgressService;
 import com.github.barteksc.pdfviewer.PDFView;
 
 import java.io.File;
 
 public class PdfViewerActivity extends AppCompatActivity {
-    private PDFView pdfView;
     private float previousPupilY = 0;
+    private PDFView pdfView;
+    private ReadProgressService readProgressService;
 
     private final BroadcastReceiver pupilMovementReceiver = new BroadcastReceiver() {
         @Override
@@ -72,8 +76,19 @@ public class PdfViewerActivity extends AppCompatActivity {
         String filePath = intent.getStringExtra("filePath");
         File file = new File(filePath);
 
+        this.readProgressService = new ReadProgressService(this);
+        int lastPage = this.readProgressService.getLastReadPage(filePath);
+
         try {
-            pdfView.fromFile(file).enableSwipe(true).enableDoubletap(true).load();
+            pdfView.fromFile(file).defaultPage(lastPage).enableSwipe(true).enableDoubletap(true).onLoad(allPages -> {
+                this.readProgressService.saveAllPagesCount(filePath, allPages);
+                ImageButton backButton = findViewById(R.id.back_button);
+                backButton.setOnClickListener(v -> {
+                    int currentPage = pdfView.getCurrentPage();
+                    this.readProgressService.saveLastReadPage(filePath, currentPage);
+                    finish();
+                });
+            }).load();
         } catch (Exception e) {
             Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
         }
@@ -94,15 +109,15 @@ public class PdfViewerActivity extends AppCompatActivity {
     @Override
     protected void onPause() {
         super.onPause();
-        unregisterReceiver(pupilMovementReceiver);
-        unregisterReceiver(pupilPresenceReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilMovementReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilPresenceReceiver);
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        unregisterReceiver(pupilMovementReceiver);
-        unregisterReceiver(pupilPresenceReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilMovementReceiver);
+        LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilPresenceReceiver);
     }
 
     private void scrollPdf(float pupilY, float eyeLineY) {
