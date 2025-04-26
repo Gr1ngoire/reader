@@ -77,7 +77,9 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
         int lastReadPageIndex = readProgressService.getLastReadPage(bookFile.getPath());
         int readProgress = lastReadPageIndex == 0 || bookAllPagesCount == 0 ? 0 : (int) ((lastReadPageIndex / (float) bookAllPagesCount) * 100);
         TextView readProgressLabel = holder.itemView.findViewById(R.id.read_progress);
-        readProgressLabel.setText(String.format("%d%% read", readProgress));
+        if (isBookDownloaded) {
+            readProgressLabel.setText(String.format("%d%% read", readProgress));
+        }
 
         holder.itemView.setOnClickListener(event -> new Thread(() -> {
             try {
