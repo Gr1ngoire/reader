@@ -1,4 +1,4 @@
-package com.example.reader;
+package com.example.reader.activities;
 
 import android.Manifest;
 import android.content.pm.PackageManager;
@@ -18,6 +18,8 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.example.reader.adapters.BookAdapter;
+import com.example.reader.R;
 import com.example.reader.entities.Book;
 import com.example.reader.services.BooksService;
 import com.google.android.material.button.MaterialButton;
@@ -37,6 +39,7 @@ public class MainActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
+        // Initialize OpenCV
         if (!OpenCVLoader.initLocal()) {
             Log.e("OpenCV", "OpenCV initialization failed!");
             Toast.makeText(this, "OpenCV initialization failed!", Toast.LENGTH_LONG).show();
@@ -45,13 +48,12 @@ public class MainActivity extends AppCompatActivity {
             Log.d("OpenCV", "OpenCV initialized successfully");
         }
 
-        // Request Camera Permission if not granted
+        // Request Camera Permissions
         if (ContextCompat.checkSelfPermission(this, android.Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.CAMERA}, CAMERA_PERMISSION_CODE);
             Log.d("CameraActivity", "Camera permission granted");
         } else {
             Log.d("CameraActivity", "Camera permission already granted");
-            // Start the pupil detection service in the background
         }
 
         this.booksService = new BooksService(this);
@@ -59,6 +61,18 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         this.initMyBooksFiltersButton();
         this.displayAllBooks();
+    }
+
+    @Override
+    protected void onResume() {
+        super.onResume();
+
+        if (areMyBooksSelected) {
+            this.displayMyBooks();
+        } else {
+            this.displayAllBooks();
+        }
+
     }
 
     private void initAllBooksLayout(List<Book> books) {
@@ -166,18 +180,6 @@ public class MainActivity extends AppCompatActivity {
         allBooksButton.setTextColor(ColorStateList.valueOf(myBooksButtonColour));
         myBooksButton.setBackgroundTintList(ColorStateList.valueOf(myBooksButtonColour));
         myBooksButton.setTextColor(ColorStateList.valueOf(allBooksButtonColour));
-    }
-
-    @Override
-    protected void onResume() {
-        super.onResume();
-
-        if (areMyBooksSelected) {
-            this.displayMyBooks();
-        } else {
-            this.displayAllBooks();
-        }
-
     }
 
 }

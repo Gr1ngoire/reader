@@ -36,7 +36,7 @@ public class FrameProcessingService {
 
         // Get row strides and pixel strides
         int yRowStride = yPlane.getRowStride();
-        int uvRowStride = uPlane.getRowStride(); // U and V have same stride
+        int uvRowStride = uPlane.getRowStride();
         int uvPixelStride = uPlane.getPixelStride();
 
         // Create a Mat for YUV

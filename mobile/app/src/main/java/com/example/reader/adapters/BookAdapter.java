@@ -1,4 +1,4 @@
-package com.example.reader;
+package com.example.reader.adapters;
 
 import android.content.ActivityNotFoundException;
 import android.content.Context;
@@ -15,7 +15,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
-import com.example.reader.activities.PdfViewerActivity;
+import com.example.reader.R;
+import com.example.reader.activities.ReadingActivity;
 import com.example.reader.entities.Book;
 import com.example.reader.services.BooksService;
 import com.example.reader.services.ReadProgressService;
@@ -84,7 +85,7 @@ public class BookAdapter extends RecyclerView.Adapter<BookAdapter.BookViewHolder
         holder.itemView.setOnClickListener(event -> new Thread(() -> {
             try {
                 String downloadedBookFilePath = booksService.getBookContent(book.getFileName());
-                Intent book_content_intent = new Intent(context, PdfViewerActivity.class);
+                Intent book_content_intent = new Intent(context, ReadingActivity.class);
                 book_content_intent.putExtra("filePath", downloadedBookFilePath);
                 context.startActivity(book_content_intent);
 
