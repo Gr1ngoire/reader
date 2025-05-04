@@ -25,6 +25,7 @@ import com.github.barteksc.pdfviewer.PDFView;
 import java.io.File;
 
 public class ReadingActivity extends AppCompatActivity {
+    private float previousEyeY = 0;
     private float previousPupilY = 0;
     private PDFView pdfView;
     private ReadProgressService readProgressService;
@@ -114,12 +115,19 @@ public class ReadingActivity extends AppCompatActivity {
         LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilPresenceReceiver);
     }
 
-    private void scrollPdf(float pupilY, float eyeLineY) {
+    private void scrollPdf(float pupilY, float eyeY) {
         float pupilYToUse = pupilY == 0 ? this.previousPupilY : pupilY;
-        float deltaByEyeLine = eyeLineY - pupilYToUse;
-        this.previousPupilY = pupilYToUse;
+        float eyeYToUse = this.previousEyeY == 0 ? eyeY : (eyeY + this.previousEyeY) / 2;
+        if (pupilY == 0) {
+            eyeYToUse = this.previousEyeY;
+        }
 
-        Toast.makeText(this, "DELTA" + " " + deltaByEyeLine, Toast.LENGTH_SHORT).show();
+        float deltaByEyeLine = eyeYToUse - pupilYToUse;
+
+        this.previousPupilY = pupilYToUse;
+        this.previousEyeY = eyeYToUse;
+
+        Toast.makeText(this, "DELTA " + deltaByEyeLine + " EYE " + eyeY + " PUPIL " + pupilY, Toast.LENGTH_SHORT).show();
 
         WindowMetrics metrics = ((WindowManager) this.getSystemService(Context.WINDOW_SERVICE)).getCurrentWindowMetrics();
         Rect bounds = metrics.getBounds();
@@ -127,7 +135,7 @@ public class ReadingActivity extends AppCompatActivity {
 
         float lowerBound = screenHeight / (float) -564.7;
         // -3.4
-        if (deltaByEyeLine <= 0 && deltaByEyeLine >= -3.4) {
+        if (deltaByEyeLine <= 0 && deltaByEyeLine >= -3) {
             return;
         }
 
@@ -137,7 +145,7 @@ public class ReadingActivity extends AppCompatActivity {
             return;
         }
 
-        pdfView.moveRelativeTo(0, deltaByEyeLine * 3); // Adjust sensitivity factor
+        pdfView.moveRelativeTo(0, -deltaByEyeLine * 2); // Adjust sensitivity factor
         pdfView.post(() -> pdfView.loadPages());
     }
 }

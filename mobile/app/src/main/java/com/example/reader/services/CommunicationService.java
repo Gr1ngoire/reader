@@ -47,7 +47,7 @@ public class CommunicationService {
     }
 
     private double prepareEyeCenterOrdinate(Rect eye, Rect face) {
-        return face.y + eye.y + ((double) eye.height / 3.8);
+        return face.y + eye.y + ((double) eye.height / 3.4);
     }
 
     private double preparePupilCenterOrdinate(KeyPoint pupil, Rect eye, Rect face) {
