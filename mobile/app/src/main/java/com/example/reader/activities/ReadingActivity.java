@@ -88,6 +88,7 @@ public class ReadingActivity extends AppCompatActivity {
             Toast.makeText(this, "Error loading PDF", Toast.LENGTH_SHORT).show();
         }
 
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilMovementReceiver, new IntentFilter(CommunicationService.PUPIL_MOVEMENT_INTENT_NAME));
         LocalBroadcastManager.getInstance(this).registerReceiver(pupilPresenceReceiver, new IntentFilter(CommunicationService.PUPIL_DETECTION_INTENT_NAME));
         Intent serviceIntent = new Intent(this, CameraForegroundService.class);
@@ -106,6 +107,7 @@ public class ReadingActivity extends AppCompatActivity {
         super.onPause();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilMovementReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilPresenceReceiver);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     @Override
@@ -113,6 +115,7 @@ public class ReadingActivity extends AppCompatActivity {
         super.onDestroy();
         LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilMovementReceiver);
         LocalBroadcastManager.getInstance(this).unregisterReceiver(pupilPresenceReceiver);
+        getWindow().clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
     }
 
     private void scrollPdf(float pupilY, float eyeY) {
@@ -127,7 +130,7 @@ public class ReadingActivity extends AppCompatActivity {
         this.previousPupilY = pupilYToUse;
         this.previousEyeY = eyeYToUse;
 
-        Toast.makeText(this, "DELTA " + deltaByEyeLine + " EYE " + eyeY + " PUPIL " + pupilY, Toast.LENGTH_SHORT).show();
+        //Toast.makeText(this, "DELTA " + deltaByEyeLine + " EYE " + eyeY + " PUPIL " + pupilY, Toast.LENGTH_SHORT).show();
 
         WindowMetrics metrics = ((WindowManager) this.getSystemService(Context.WINDOW_SERVICE)).getCurrentWindowMetrics();
         Rect bounds = metrics.getBounds();

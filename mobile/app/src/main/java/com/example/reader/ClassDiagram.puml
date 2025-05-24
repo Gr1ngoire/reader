@@ -1,0 +1,186 @@
+@startuml
+'https://plantuml.com/class-diagram
+
+class Book {
+    - name : String
+    - author : String
+    - bookFileName : String
+
+    + Book(name : String, author : String, bookFileName : String)
+    + getAuthor() : String
+    + getName() : String
+    + getFileName() : String
+    + hashCode() : int
+    + equals(object : Object) : boolean
+}
+
+class BookAdapter {
+    - books : List<Book>
+    - rectangleWidth : int
+    - rectangleHeight : int
+
+    + BookAdapter(books : List<Book>)
+    + onCreateViewHolder(parent : ViewGroup, viewType : int) : BookViewHolder
+    + onBindViewHolder(holder : BookViewHolder, position : int) : void
+    + getItemCount() : int
+    + setRectangleDimensions(width : int, height : int) : void
+}
+
+class BookViewHolder {
+    - name : TextView
+    - author : TextView
+    - deleteButton : ImageButton
+
+    + BookViewHolder(itemView : View)
+}
+
+class BooksService {
+    - TAG : String
+    - PDF_EXTENSION_PORTION : String
+    - context : Context
+    - s3Client : AmazonS3
+    - readProgressService : ReadProgressService
+
+    + BooksService(context : Context)
+    + getBookContent(bookFileName : String) : String
+    + getAllBooks() : List<Book>
+    + getBookFromFileName(rawFileName : String) : Book
+    + getDownloadedBooks() : List<Book>
+    + deleteBookFromLocalStorage(bookFileName : String) : void
+}
+
+class CameraForegroundService {
+        - static TAG : String
+        - frameProcessingService : FrameProcessingService
+        - cameraManager : CameraManager
+        - cameraDevice : CameraDevice
+        - backgroundHandler : Handler
+        - backgroundThread : HandlerThread
+        - imageReader : ImageReader
+        + CameraForegroundService()
+        + onCreate() : void
+        - startForegroundService() : void
+        - startBackgroundThread() : void
+        - openFrontCamera() : void
+        - getFrontCameraId() : String
+        - startCameraPreview() : void
+        - processFrame(reader : ImageReader) : void
+        + onStartCommand(intent : Intent, flags : int, startId : int) : int
+        + onBind(intent : Intent) : IBinder
+        + onDestroy() : void
+        - loadCascade(context : Context, cascadeFileName : String) : CascadeClassifier
+}
+
+class CvCameraFrameWrapper {
+    - rgbaMat : Mat
+    + CvCameraFrameWrapper(mat : Mat)
+    + rgba() : Mat
+    + gray() : Mat
+    + release() : void
+}
+
+interface CvCameraViewFrame {
+    + rgba() : Mat
+    + gray() : Mat
+    + release() : void
+}
+
+class CommunicationService {
+    + static PUPIL_MOVEMENT_INTENT_NAME : String
+    + static PUPIL_ORDINATE_PARAMETER_NAME : String
+    + static EYE_CENTER_ORDINATE_PARAMETER_NAME : String
+    + static PUPIL_DETECTION_INTENT_NAME : String
+    + static PUPIL_PRESENCE_PARAMETER_NAME : String
+    - context : Context
+    + CommunicationService(context : Context)
+    + sendPupilData(pupils : MatOfKeyPoint, eye : Rect, face : Rect) : void
+    + sendPupilPresenceData(isPupilPresent : boolean) : void
+    - prepareEyeCenterOrdinate(eye : Rect, face : Rect) : double
+    - preparePupilCenterOrdinate(pupil : KeyPoint, eye : Rect, face : Rect) : double
+}
+
+class FrameProcessingService {
+    - pupilsDetectionService : PupilsDetectionService
+    - communicationService : CommunicationService
+    + FrameProcessingService(pupilsDetectionService : PupilsDetectionService, communicationService : CommunicationService)
+    + convertYUVtoMat(image : Image) : Mat
+    + processFrame(inputFrame : CameraBridgeViewBase.CvCameraViewFrame) : void
+    - cutEyebrows(eyeFrame : Mat) : Mat
+}
+
+class PupilsDetectionService {
+    - faceCascade : CascadeClassifier
+    - eyesCascade : CascadeClassifier
+    + PupilsDetectionService(faceCascade : CascadeClassifier, eyesCascade : CascadeClassifier)
+    + detectFaces(inputFrame : Mat) : Rect[]
+    + detectEyes(faceFrame : Mat) : Rect[]
+    + detectPupils(eyeFrame : Mat, eye : Rect) : MatOfKeyPoint
+    - isOverlapping(r1 : Rect, r2 : Rect) : boolean
+}
+
+class ReadProgressService {
+    - LAST_PAGE_PREFERENCE_NAME : String
+    - ALL_PAGES_COUNT_PREFERENCE_NAME : String
+    - context : Context
+    + ReadProgressService(context : Context)
+    + saveLastReadPage(filePath : String, page : int) : void
+    + saveAllPagesCount(filePath : String, pages : int) : void
+    + getLastReadPage(filePath : String) : int
+    + getAllPagesCount(filePath : String) : int
+    + removeReadProgressInfo(filePath : String) : void
+    + removeAllPagesCount(filePath : String) : void
+    - getBookFileKeyByFilePath(filePath : String) : String
+}
+
+class MainActivity {
+    - static final int CAMERA_PERMISSION_CODE
+    - boolean areMyBooksSelected
+    - BooksService booksService
+    + onCreate(Bundle savedInstanceState)
+    + onResume()
+    - initAllBooksLayout(List<Book> books)
+    - initMyBooksFiltersButton()
+    - displayAllBooks()
+    - displayMyBooks()
+    - clearPrivateDownloads()
+    - updateBooksFilterButtonsColours(MaterialButton allBooksButton, MaterialButton myBooksButton)
+}
+
+class ReadingActivity {
+    - float previousPupilY
+    - PDFView pdfView
+    - ReadProgressService readProgressService
+    - final BroadcastReceiver pupilMovementReceiver
+    - final BroadcastReceiver pupilPresenceReceiver
+    + onCreate(Bundle savedInstanceState)
+    + onResume()
+    + onPause()
+    + onDestroy()
+    - scrollPdf(float pupilY, float eyeLineY)
+}
+
+BookAdapter --> BookViewHolder
+BookAdapter --> Book
+BookAdapter --> BooksService
+BookAdapter --> ReadProgressService
+BookAdapter --> ReadingActivity
+
+BooksService --> ReadProgressService
+BooksService --> Book
+
+CvCameraFrameWrapper ..|> CvCameraViewFrame
+CameraForegroundService --> FrameProcessingService
+CameraForegroundService --> PupilsDetectionService
+CameraForegroundService --> CommunicationService
+CameraForegroundService ..> CvCameraFrameWrapper : uses
+
+FrameProcessingService --> PupilsDetectionService
+FrameProcessingService --> CommunicationService
+
+MainActivity --> BooksService
+MainActivity --> BookAdapter
+
+ReadingActivity --> ReadProgressService
+ReadingActivity --> CameraForegroundService
+
+@enduml
