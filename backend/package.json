@@ -11,8 +11,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@aws-sdk/client-s3": "3.729.0",
-    "@aws-sdk/crc64-nvme-crt": "3.729.0",
+    "@aws-sdk/client-s3": "3.995.0",
+    "@aws-sdk/crc64-nvme-crt": "3.995.0",
     "koa": "2.15.3",
     "koa-router": "13.0.1"
   },
